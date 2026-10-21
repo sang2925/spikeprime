@@ -82,6 +82,7 @@ Things the simulator found in the team's own blocks (simulated, not tested on th
 1. **Open the simulator:**
    - From the project root run `python3 -m http.server 8000`, then open `http://localhost:8000/simulator/`
    - You can also double-click `index.html`. Drag-and-drop and the BIOGLOW picture worked from a `file://` page in Chrome launched with `--allow-file-access-from-files`; plain Chrome without that flag was not tested.
+   - The left panel shows what you use every run, in order: **View**, **Program**, **Run Controls**, **Robot Placement**, **Sensors and Telemetry**. The setup panels below them (**Drive Settings**, **Table Dimensions**, **Mat Placement**, **Background Image**, **Grid Settings**, **Movement Test**, **Cursor Position**) start closed. Click a title to open or close it. Everything inside a closed panel still works and is still locked during a run.
 
 2. **Add a background:**
    - The BIOGLOW wireframe loads by itself when the page opens. After **Remove Background** or an upload, click **Load BIOGLOW Wireframe** to bring it back. Or click "Choose File" and pick a PNG/JPG of your mat

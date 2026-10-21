@@ -75,10 +75,17 @@ main {
     font-size: 1.2em;
 }
 
-#controls h3 {
+#controls details {
+    border-top: 1px solid #0f3460;
+    padding: 4px 0;
+}
+
+#controls summary {
     color: #00d2d3;
-    margin: 15px 0 8px 0;
+    margin: 8px 0;
     font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .control-row {
