@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIKE Prime Browser Simulator - Milestone B</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>SPIKE Prime Browser Simulator</h1>
+            <p class="subtitle">Milestone B: Robot Movement and Simulated Sensors, plus .llsp3 program runner</p>
+            <p class="warning">Educational planning tool. Not official LEGO software. Not a scoring authority.</p>
+        </header>
+
+        <main>
+            <aside id="controls">
+                <h2>Controls</h2>
+
+                <section id="view-controls">
+                    <h3>View</h3>
+                    <button id="btn-fit-view">Fit to View</button>
+                    <button id="btn-toggle-grid">Toggle Grid</button>
+                    <div id="zoom-control">
+                        <label>Zoom: <span id="zoom-value">100%</span></label>
+                        <input type="range" id="zoom-slider" min="10" max="300" value="100">
+                    </div>
+                </section>
+
+                <section id="table-info">
+                    <h3>Table Dimensions</h3>
+                    <table>
+                        <tr><td>Interior X:</td><td>2362.2 mm</td></tr>
+                        <tr><td>Interior Y:</td><td>1143 mm</td></tr>
+                        <tr><td>Aspect ratio:</td><td id="table-aspect">2.067</td></tr>
+                    </table>
+                </section>
+
+                <section id="mat-controls">
+                    <h3>Mat Placement</h3>
+                    <p class="note">Centered preview — official mat placement not verified.</p>
+                    <div class="control-row">
+                        <label>Mat X offset (mm):</label>
+                        <input type="number" id="mat-x" step="0.01" value="171.45">
+                    </div>
+                    <div class="control-row">
+                        <label>Mat Y offset (mm):</label>
+                        <input type="number" id="mat-y" step="0.01" value="3.175">
+                    </div>
+                    <div class="control-row">
+                        <label>Mat rotation (°):</label>
+                        <input type="number" id="mat-rotation" step="0.1" value="0">
+                    </div>
+                    <div id="mat-warning" class="warning hidden">Mat extends outside table!</div>
+                    <table>
+                        <tr><td>Mat X:</td><td>2019.3 mm</td></tr>
+                        <tr><td>Mat Y:</td><td>1136.65 mm</td></tr>
+                    </table>
+                </section>
+
+                <section id="background-controls">
+                    <h3>Background Image</h3>
+                    <div class="button-row">
+                        <button id="btn-load-bioglow">Load BIOGLOW Wireframe</button>
+                    </div>
+                    <input type="file" id="bg-file" accept="image/png,image/jpeg,image/jpg">
+                    <button id="btn-remove-bg" class="hidden">Remove Background</button>
+                    <div id="bg-settings" class="hidden">
+                        <p id="bg-source" class="info"></p>
+                        <canvas id="bg-preview" width="280" height="160" title="Whole image. Red box = crop used as the mat."></canvas>
+                        <div class="control-row">
+                            <label for="bg-show">Show background:</label>
+                            <input type="checkbox" id="bg-show" checked>
+                        </div>
+                        <div class="control-row">
+                            <label>Opacity:</label>
+                            <input type="range" id="bg-opacity" min="0" max="100" value="70">
+                            <span id="bg-opacity-value">70%</span>
+                        </div>
+                        <p class="info">Crop = the part of the image that is the mat edge (image pixels, from top-left).</p>
+                        <div class="control-row">
+                            <label>Crop left (px):</label>
+                            <input type="number" id="bg-crop-x" step="1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Crop top (px):</label>
+                            <input type="number" id="bg-crop-y" step="1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Crop width (px):</label>
+                            <input type="number" id="bg-crop-w" step="1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Crop height (px):</label>
+                            <input type="number" id="bg-crop-h" step="1" value="0">
+                        </div>
+                        <div class="control-row">
+                            <label>Orientation (°):</label>
+                            <select id="bg-orientation">
+                                <option value="0">0</option>
+                                <option value="90">90</option>
+                                <option value="180">180</option>
+                                <option value="270">270</option>
+                            </select>
+                        </div>
+                        <div class="button-row">
+                            <button id="btn-reset-crop">Reset Crop</button>
+                        </div>
+                        <div id="aspect-check" class="info"></div>
+                        <p class="warning">Artwork only. Not collision geometry, not a sensor map.</p>
+                    </div>
+                </section>
+
+                <section id="robot-controls">
+                    <h3>Robot Placement</h3>
+                    <p class="note">Example dimensions — not team measurements. Drag the robot to move it. Use the 90° buttons to turn it.</p>
+                    <div class="control-row">
+                        <label>Body length (mm):</label>
+                        <input type="number" id="robot-length" step="0.1" value="180">
+                    </div>
+                    <div class="control-row">
+                        <label>Body width (mm):</label>
+                        <input type="number" id="robot-width" step="0.1" value="150">
+                    </div>
+                    <div class="control-row">
+                        <label>Position X (mm):</label>
+                        <input type="number" id="robot-x" step="0.1" value="1181.1">
+                    </div>
+                    <div class="control-row">
+                        <label>Position Y (mm):</label>
+                        <input type="number" id="robot-y" step="0.1" value="571.5">
+                    </div>
+                    <div class="control-row">
+                        <label>Heading (°, 0 = right, + = counterclockwise):</label>
+                        <input type="number" id="robot-heading" step="0.1" value="0">
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-rotate-left">⟲ Turn left 90°</button>
+                        <button id="btn-rotate-right">⟳ Turn right 90°</button>
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-save-pose">Save as Start Pose</button>
+                        <button id="btn-reset-pose">Reset to Start Pose</button>
+                    </div>
+                    <div id="start-pose-info" class="info">Start pose not saved yet.</div>
+                </section>
+
+                <section id="drive-settings">
+                    <h3>Drive Settings</h3>
+                    <p class="note">Wheel diameter is from the team record (about 20.5 cm per wheel turn). Everything else is an example or estimate, not a measurement of our robot.</p>
+                    <div class="control-row">
+                        <label>Wheel diameter (mm):</label>
+                        <input type="number" id="drive-wheel-diameter" step="0.1" value="65.3">
+                    </div>
+                    <div class="control-row">
+                        <label>Track width (mm, example):</label>
+                        <input type="number" id="drive-track-width" step="0.1" value="112">
+                    </div>
+                    <div class="control-row">
+                        <label>Gear ratio (motor turns per wheel turn, example):</label>
+                        <input type="number" id="drive-gear-ratio" step="0.01" value="1">
+                    </div>
+                    <div class="control-row">
+                        <label>Max motor speed at 100% (deg/s, estimate):</label>
+                        <input type="number" id="drive-max-speed" step="1" value="1050">
+                    </div>
+                    <div class="control-row">
+                        <label>Left motor encoder sign (example):</label>
+                        <select id="drive-left-sign"><option value="1">+1</option><option value="-1">-1</option></select>
+                    </div>
+                    <div class="control-row">
+                        <label>Right motor encoder sign (example):</label>
+                        <select id="drive-right-sign"><option value="1">+1</option><option value="-1">-1</option></select>
+                    </div>
+                    <p class="note">Encoder sign = which way the motor counts when its wheel rolls forward. It does not change which way the robot drives.</p>
+                    <table>
+                        <tr><td>Team movement pair:</td><td>BA</td></tr>
+                        <tr><td>Which of A/B is left:</td><td>Not confirmed</td></tr>
+                    </table>
+                    <div id="drive-errors" class="warning hidden"></div>
+                </section>
+
+                <section id="program-panel">
+                    <h3>Program (.llsp3)</h3>
+                    <p class="note">Open a SPIKE Word Blocks project. It is only read, never changed. The robot starts from the saved start pose.</p>
+                    <input type="file" id="program-file" accept=".llsp3">
+                    <p id="program-info" class="info">No program loaded.</p>
+                    <label for="program-move-mode" class="note">Plain "move N cm" blocks:</label>
+                    <select id="program-move-mode">
+                        <option value="commanded" selected>Drive the cm asked</option>
+                        <option value="app-guess">Team guess: app thinks 17.5 cm per wheel turn</option>
+                    </select>
+                    <p class="note">The team <code>straight</code> My Block is never corrected: it already counts motor degrees.</p>
+                    <div class="button-row">
+                        <button id="btn-program-run">Run program</button>
+                        <button id="btn-program-next">Next block</button>
+                    </div>
+                    <div id="program-now" class="info"></div>
+                    <ol id="program-list"></ol>
+                    <table id="program-sensors">
+                        <tr><td>Word Blocks yaw (clockwise +):</td><td id="prog-yaw">–</td></tr>
+                        <tr><td>Relative position B:</td><td id="prog-pos-b">–</td></tr>
+                        <tr><td>Relative position A:</td><td id="prog-pos-a">–</td></tr>
+                        <tr><td>Attachment motors:</td><td id="prog-attach">–</td></tr>
+                    </table>
+                    <ul id="program-notes" class="warning"></ul>
+                    <p class="note">Assumed, not confirmed: port B turns the left wheel and A the right. That is the only layout that matches both records (BA drives forward, turn 90 turns right). So pair AB drives backward. One loop pass takes one 5 ms step.</p>
+                </section>
+
+                <section id="run-controls">
+                    <h3>Run Controls</h3>
+                    <div class="control-row">
+                        <label>Playback speed (×):</label>
+                        <select id="test-playback">
+                            <option value="0.25">0.25</option>
+                            <option value="0.5">0.5</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-test-pause">Pause</button>
+                        <button id="btn-test-step">Step 5 ms</button>
+                        <button id="btn-test-stop">Stop</button>
+                        <button id="btn-sim-reset">Reset</button>
+                    </div>
+                    <p class="warning">Boundary and obstacle collisions are not enforced yet.</p>
+                </section>
+
+                <section id="movement-test">
+                    <h3>Movement Test</h3>
+                    <p class="note">Bounded physics test: two wheel speeds for a set time. + speed rolls that wheel forward.</p>
+                    <div class="control-row">
+                        <label>Left wheel speed (%):</label>
+                        <input type="number" id="test-left" min="-100" max="100" step="1" value="50">
+                    </div>
+                    <div class="control-row">
+                        <label>Right wheel speed (%):</label>
+                        <input type="number" id="test-right" min="-100" max="100" step="1" value="50">
+                    </div>
+                    <div class="control-row">
+                        <label>Duration (simulation s):</label>
+                        <input type="number" id="test-duration" min="0.005" max="600" step="0.1" value="2">
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-test-start">Start test</button>
+                    </div>
+                </section>
+
+                <section id="sensors">
+                    <h3>Sensors and Telemetry</h3>
+                    <table>
+                        <tr><td>Status:</td><td id="tel-status">stopped</td></tr>
+                        <tr><td>Time (simulation):</td><td id="tel-time">0.000 s</td></tr>
+                        <tr><td>X:</td><td id="tel-x">0 mm</td></tr>
+                        <tr><td>Y:</td><td id="tel-y">0 mm</td></tr>
+                        <tr><td>World heading:</td><td id="tel-heading">0°</td></tr>
+                        <tr><td>Gyro since reset:</td><td id="tel-gyro">0°</td></tr>
+                        <tr><td>Logical left encoder:</td><td id="tel-enc-left">0°</td></tr>
+                        <tr><td>Logical right encoder:</td><td id="tel-enc-right">0°</td></tr>
+                    </table>
+                    <p class="note">Heading and gyro: counterclockwise is +. SPIKE Word Blocks yaw counts clockwise as +, so it shows the opposite sign. Gyro is not wrapped (two left spins read 720°).</p>
+                    <p class="note">Encoders are logical left/right, not ports A/B, because the A/B left/right mapping is not confirmed.</p>
+                    <div id="tel-fault" class="warning hidden"></div>
+                    <div class="button-row">
+                        <button id="btn-gyro-reset">Reset gyro</button>
+                    </div>
+                    <div class="control-row">
+                        <label for="path-show">Show path:</label>
+                        <input type="checkbox" id="path-show" checked>
+                    </div>
+                    <div class="button-row">
+                        <button id="btn-path-clear">Clear path</button>
+                    </div>
+                </section>
+
+                <section id="grid-controls">
+                    <h3>Grid Settings</h3>
+                    <div class="control-row">
+                        <label>Minor spacing (mm):</label>
+                        <input type="number" id="grid-minor" step="1" value="50">
+                    </div>
+                    <div class="control-row">
+                        <label>Major spacing (mm):</label>
+                        <input type="number" id="grid-major" step="1" value="100">
+                    </div>
+                </section>
+
+                <section id="cursor-info">
+                    <h3>Cursor Position</h3>
+                    <table>
+                        <tr><td>X:</td><td id="cursor-x-mm">0 mm</td></tr>
+                        <tr><td>Y:</td><td id="cursor-y-mm">0 mm</td></tr>
+                        <tr><td>X:</td><td id="cursor-x-cm">0 cm</td></tr>
+                        <tr><td>Y:</td><td id="cursor-y-cm">0 cm</td></tr>
+                    </table>
+                </section>
+            </aside>
+
+            <div id="canvas-container">
+                <canvas id="simulator"></canvas>
+            </div>
+        </main>
+
+        <footer>
+            <p>Local educational tool. No AI API required. No official LEGO compatibility claimed.</p>
+        </footer>
+    </div>
+
+    <script src="physics.js"></script>
+    <script src="llsp3.js"></script>
+    <script src="wordblocks.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
