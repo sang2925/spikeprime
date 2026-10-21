@@ -88,6 +88,26 @@ main {
     cursor: pointer;
 }
 
+#mission-select {
+    width: 100%;
+    margin: 6px 0;
+}
+
+#mission-detail h4 {
+    color: #feca57;
+    margin: 8px 0 4px 0;
+}
+
+#mission-detail ul {
+    padding-left: 18px;
+    font-size: 0.85em;
+    margin: 4px 0;
+}
+
+#mission-detail ul.note, #mission-detail ul.warning {
+    font-weight: normal;
+}
+
 .control-row {
     display: flex;
     align-items: center;

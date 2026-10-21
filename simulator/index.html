@@ -140,6 +140,18 @@
                         <button id="btn-path-clear">Clear path</button>
                     </div>
                 </details>
+                <details id="mission-panel" open>
+                    <summary>BIOGLOW Missions</summary>
+                    <p class="note">Rules copied from the Robot Game Rulebook and Challenge Updates (see README). The rulebook is the authority. This is not a scorer.</p>
+                    <div class="control-row">
+                        <label for="mission-show">Show mission markers on the map:</label>
+                        <input type="checkbox" id="mission-show" checked>
+                    </div>
+                    <select id="mission-select"></select>
+                    <div id="mission-detail"></div>
+                    <p class="note">Markers are labels placed from the wireframe, good to about 15 mm. They are not collision shapes.</p>
+                </details>
+
                 <details id="drive-settings">
                     <summary>Drive Settings</summary>
                     <p class="note">Wheel diameter is from the team record (about 20.5 cm per wheel turn). Everything else is an example or estimate, not a measurement of our robot.</p>
@@ -186,14 +198,14 @@
 
                 <details id="mat-controls">
                     <summary>Mat Placement</summary>
-                    <p class="note">Centered preview — official mat placement not verified.</p>
+                    <p class="note">Aligned to the bottom wall and centred left to right, as the Robot Game Rulebook (Field Setup, Step 1) says.</p>
                     <div class="control-row">
                         <label>Mat X offset (mm):</label>
                         <input type="number" id="mat-x" step="0.01" value="171.45">
                     </div>
                     <div class="control-row">
                         <label>Mat Y offset (mm):</label>
-                        <input type="number" id="mat-y" step="0.01" value="3.175">
+                        <input type="number" id="mat-y" step="0.01" value="0">
                     </div>
                     <div class="control-row">
                         <label>Mat rotation (°):</label>
@@ -313,6 +325,7 @@
     <script src="physics.js"></script>
     <script src="llsp3.js"></script>
     <script src="wordblocks.js"></script>
+    <script src="missions.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

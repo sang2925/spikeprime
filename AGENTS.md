@@ -803,6 +803,8 @@ Label unverified placement clearly.
 
 Do not assume centered placement is official.
 
+Evidence (2026-10-21): the Robot Game Rulebook, Field Setup Step 1, says to align the mat to the bottom wall and center it between the left and right walls. The simulator default is therefore X offset 171.45 mm, Y offset 0.
+
 Warn if the mat extends outside the table.
 
 ### Background
@@ -1088,11 +1090,14 @@ Built by the coding assistant on 2026-10-21. Simulated and browser-tested only. 
 | B. Physics, drive settings, gyro, encoders, movement-test panel | Done |
 | `.llsp3` program runner (read-only import, step by step) | Done, at the user's request ahead of C |
 | C. Editable command list, translation | Not started |
+| BIOGLOW mission data and map markers (`missions.js`) | Done 2026-10-21 for all 15 missions. Labels only: no collisions, no scoring. |
 | D. Collisions, save/load, examples | Not started. UI shows "Boundary and obstacle collisions are not enforced yet." |
 
-Files: `simulator/index.html`, `styles.css`, `app.js` (UI), `physics.js` (no DOM), `llsp3.js` (ZIP reader, no DOM), `wordblocks.js` (Word Blocks interpreter, no DOM), `tools/pdf_render.swift`, `assets/`, `tests/`, `test-results/`.
+Files: `simulator/index.html`, `styles.css`, `app.js` (UI), `physics.js` (no DOM), `llsp3.js` (ZIP reader, no DOM), `wordblocks.js` (Word Blocks interpreter, no DOM), `missions.js` (mission data, no DOM), `tools/pdf_render.swift`, `assets/`, `tests/`, `test-results/`.
 
-Run: `python3 -m http.server 8000` from the project root, open `http://localhost:8000/simulator/`. Tests: `node --test tests/` from `simulator/` (32 pass on 2026-10-21). Evidence logs: `simulator/test-results/milestone-b-checks.md`, `program-runner-checks.md`.
+Run: `python3 -m http.server 8000` from the project root, open `http://localhost:8000/simulator/`. Tests: `node --test tests/` from `simulator/` (38 pass on 2026-10-21). Evidence logs: `simulator/test-results/milestone-b-checks.md`, `program-runner-checks.md`, `missions-checks.md`.
+
+Official documents in `simulator/assets/` (downloaded 2026-10-21, keep unchanged; hashes in `simulator/README.md`): `bioglow-rulebook.pdf` (id 30082603 V1, 28/4/26), `bioglow-field-setup-guide.pdf`, `bioglow-challenge-updates.pdf` (updated 2026-10-14), plus the wireframe PDF. Together about 30 MB. Challenge Updates supersede the rulebook; re-download them before relying on the mission text.
 
 Background:
 
@@ -1111,6 +1116,9 @@ Program runner:
 - Assumptions shown in the UI: port B = simulator left wheel, A = right (the only layout matching "BA drives forward" plus "turn 90 turns right"); pair AB therefore drives backward; one loop pass = one 5 ms step; yaw 0.1° steps wrapping at ±180°; motor positions whole degrees; speeds clamped to ±100%.
 - Plain-move mode: "Drive the cm asked" (default) or "Team guess: 17.5 cm per wheel turn". The `straight` helper is never corrected.
 - Run program uses the robot's current hand-placed pose as the new start pose, otherwise the saved start. Robot placement: drag to move, ⟲/⟳ 90° buttons or typed heading to turn.
+- A `.llsp3` file can be dropped anywhere on the page, or opened with Choose File. Dropping only opens it; Run program starts it. Refused while a program is running.
+
+Left panel (reworked 2026-10-21, it had grown to 4 screens): View, Program, Run Controls, Robot Placement, Sensors and BIOGLOW Missions are open, in that order; Drive Settings, Table, Mat, Background, Grid, Movement Test and Cursor are collapsed `<details>`. Inputs in collapsed panels still work and are still locked during a run.
 
 Findings (simulated, not robot-tested):
 
@@ -1120,10 +1128,24 @@ Findings (simulated, not robot-tested):
 
 Open items:
 
+- Mission markers: Mission 10 (which habitat is which), Missions 6/7 (one shared marker) and the dock names (D2 farm, D3 city) are inferred; see `simulator/README.md`, "BIOGLOW Missions".
 - Track width needs a ruler measurement.
 - Mat rotation pivots on the mat centre and turns screen-clockwise; section 14 asks for the bottom-left corner. Not changed.
 - No body offset or attachment footprint yet.
 - A "keeps rolling after stop" setting would need a measured, approved `turn 90` mat test.
+- Settings (track width, start pose, drive settings) reset on page reload; no save/load yet.
+
+Next steps, in the order suggested to the user (none started; each needs the user's go-ahead):
+
+1. Save/load as versioned JSON, then named start positions (Milestone D, part 1).
+2. Table-edge collisions with the robot's full footprint (Milestone D, part 2).
+3. Model obstacles from the wireframe outlines, named rectangles, marked approximate (Milestone D, part 3).
+4. Calibration: ruler measurement of track width; an approved `turn 90` and `straight` mat test to set a coasting/overshoot setting. Robot motion needs explicit approval (section 2).
+5. Real-versus-simulated comparison: record where the real robot ended and show it beside the simulated end point.
+6. Mat rotation pivot to the bottom-left corner (section 14 asks for it).
+7. Optional: a 3D view. Discussed with the user: it would not make the simulation more accurate; calibration (step 4) matters more.
+
+Resume in a new session: read this section, run `node --test tests/` from `simulator/` (expect 38 pass), serve the project root with `python3 -m http.server 8000`, open `/simulator/`, and drop `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` on the page (expect it to finish at 19.98 simulated seconds). Evidence logs are in `simulator/test-results/*-checks.md`.
 
 ## 15. Simulator validation
 
@@ -1461,6 +1483,6 @@ Set up on 2026-10-21:
 - Repo identity: `Sebastian Ang <angdajiansebastian@gmail.com>` (local config). The global git email is a work address; do not use it here.
 - Remote: `git@github-sang2925:sang2925/spikeprime.git`. The repo must stay private: file names contain students' first names, and it holds FIRST's BIOGLOW PDF.
 - `github-sang2925` is a host alias in `~/.ssh/config` using `~/.ssh/id_ed25519_sang2925` (created 2026-10-21, no passphrase). Backup of the old config: `~/.ssh/config.bak-2026-10-21`. Plain `github.com` uses `id_ed25519`, which logs in as `sang2925-pnnl`.
-- First push not done yet: the public key still had to be added to the sang2925 GitHub account. Check with `ssh -T git@github-sang2925`, then `git push -u origin main`.
+- Pushed: `origin/main` was at `c0ae73e` on 2026-10-21 and matched the local branch (user pushed; `ssh -T git@github-sang2925` answers "Hi sang2925!"). Whether the GitHub repo is private was not checked by the assistant; confirm in the repo settings.
 - `.gitignore`: `.DS_Store`, `__pycache__/`, `*.pyc`, `node_modules/`, `*.tmp`.
 ````

@@ -46,8 +46,11 @@ A local, offline-capable browser-based simulator for LEGO SPIKE Prime FIRST LEGO
 ### `/simulator/wordblocks.js`
 - Runs the Word Blocks themselves (including the team's My Blocks) against `physics.js`, one 5 ms step at a time.
 
+### `/simulator/missions.js`
+- The 15 BIOGLOW missions (scoring lines, notes, Challenge Updates) and where each model sits on the wireframe. No DOM.
+
 ### `/simulator/tests/`
-- `physics.test.js`, `wordblocks.test.js`. Run from `simulator/`: `node --test tests/` (Node 18 or newer).
+- `physics.test.js`, `wordblocks.test.js`, `missions.test.js`. Run from `simulator/`: `node --test tests/` (Node 18 or newer).
 
 ## Running a SPIKE Program (.llsp3)
 
@@ -210,7 +213,37 @@ Default crop = centres of those border lines, measured from the PNG pixels: left
 
 **Shape mismatch.** That border is 1.757 wide for every 1 tall. The configured mat (2019.3 × 1136.65 mm) is 1.777. That is 1.1% off. Page 1's own lettered grid gives the same 1.757 (10 columns labelled 20 cm, so about 200 cm wide). So the wireframe is a diagram, not an exact-scale drawing. The simulator does not stretch it. It is drawn 1996.7 × 1136.65 mm, centred on the mat, so the left and right edges sit about 11 mm inside the mat outline.
 
-The wireframe does not define collision geometry or mission locations.
+The wireframe does not define collision geometry. The mission markers below are labels placed on top of it.
+
+## BIOGLOW Missions
+
+Open **BIOGLOW Missions** in the left panel. Pick a mission in the list, or click its green marker on the map. You see its scoring lines, notes, any Challenge Update that changed it, and where it is on the mat. Docks (purple, D1 to D3) hold the interchangeable models for Missions 13 to 15. Untick **Show mission markers** to hide them. Markers appear only while the BIOGLOW picture is the background.
+
+Where the information comes from (downloaded 2026-10-21 into `assets/`; keep them unchanged):
+
+| File | Source | SHA-256 |
+|---|---|---|
+| `bioglow-rulebook.pdf` | Robot Game Rulebook, file id 30082603 V1, InDesign date 28/4/26. Scoring on pages 9 to 12, rules on pages 13 to 18. | `000852651672a2538bc1f93bd1c84cd7f9a34fb73f6c49f1c6c5309f4787c8f2` |
+| `bioglow-field-setup-guide.pdf` | Field Setup Guide. Page 2 is FIRST's numbered placement map; pages 3 to 15 are the model photos. | `f04709ef981b2622a145a3db2b0c1876022422e0dac4f27efc0ef4d293ff59e0` |
+| `bioglow-challenge-updates.pdf` | Challenge Updates, "Updated October 14th, 2026". Updates 01 (Lucky Leaves), 02 (dock release) and 03 (tree taping) are shown with the missions they change. | `d1c77661e28867803ffc5c4cebdd86a6799f8e30d953c44ddb80e0abd8375b69` |
+
+The Updates win over the rulebook. Example: the rulebook page for Mission 4 still has the old katydid wording; the simulator shows the Update 01 wording and says so.
+
+How the marker positions were found:
+
+1. Each rulebook mission page was read as a picture and the scoring lines were typed in.
+2. FIRST's numbered map (rulebook page 8, Field Setup Guide page 2) gave the rough place of each number.
+3. Each number was matched to a model outline on our wireframe picture. The marker sits on that outline.
+
+Each marker has a confidence and a short reason, shown in the mission details. **Not worked out:** which of the two Mission 10 markers is the spider habitat and which is the snail habitat; the split between Missions 6 and 7 (one shared marker); which dock is "mine", "farm" or "city" (the rulebook text does not say; D1 is "mine" because the Field Setup Guide photo of the mine dock shows orange ground with the river on its left, and D2 and D3 are named from the mat artwork).
+
+Limits:
+
+- Markers are good to about 15 mm. The wireframe is 1.1% narrower than the configured mat, so they can be off a little more near the left and right walls.
+- The markers are labels. They do not stop the robot and they do not know whether a mission was completed. There is no scoring: the simulator cannot see a flipped rock or a raised platform.
+- Mission 4 (Lucky Leaves) cannot be rehearsed exactly: the leaves are randomised and teams are not told where the katydid starts.
+- The rule text is copied by hand from the rulebook pictures. Check anything that matters against the rulebook.
+- The mat is now placed against the bottom wall (Mat Y offset 0), as the rulebook's Field Setup (Step 1) says: "align the mat to the bottom wall and center it between the left and right walls". Before 2026-10-21 it was centred up and down (3.175 mm).
 
 ## Milestone A Goals Achieved
 

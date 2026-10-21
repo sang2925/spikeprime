@@ -28,12 +28,12 @@ const MAT_HEIGHT = 1136.65;      // mm
 
 // Default mat placement (centered on table)
 const DEFAULT_MAT_X = 171.45;    // mm from left
-const DEFAULT_MAT_Y = 3.175;     // mm from bottom
+const DEFAULT_MAT_Y = 0;         // mm from bottom: the rulebook (Field Setup, Step 1) says align the mat to the bottom wall
 
 // BIOGLOW wireframe: page 2 of assets/bioglow-wireframe-grid.pdf rendered at 300 dpi.
 // Crop = centres of the drawn mat border lines, measured from the PNG pixels (±1 px).
 const BIOGLOW_IMAGE_URL = 'assets/bioglow-wireframe-page2-300dpi.png';
-const BIOGLOW_CROP = { x: 166, y: 636, w: 2967, h: 1689 };
+const BIOGLOW_CROP = BioglowMissions.IMAGE.matCrop;   // missions.js is loaded before app.js
 
 // Grid defaults
 const DEFAULT_GRID_MINOR = 50;   // mm
@@ -100,6 +100,10 @@ const state = {
     
     // Traveled path (points live in the simulation)
     pathVisible: true,
+    
+    // BIOGLOW mission markers (shown only while the BIOGLOW picture is the background)
+    showMissions: true,
+    bgIsBioglow: false,
 };
 
 // ============================================================================
@@ -413,6 +417,9 @@ function render() {
     // Draw mat
     drawMat();
     
+    // Draw BIOGLOW mission markers (labels only)
+    if (state.bgIsBioglow && state.showMissions) drawMissions();
+    
     // Draw traveled path
     if (state.pathVisible) drawPath();
     
@@ -706,6 +713,8 @@ canvas.addEventListener('mousedown', (e) => {
         state.dragRobotStartX = state.robotX;
         state.dragRobotStartY = state.robotY;
         canvas.classList.add('dragging-robot');
+    } else if (state.bgIsBioglow && state.showMissions) {
+        pickMissionAt(sx, sy);
     }
 });
 
@@ -809,8 +818,9 @@ matRotationInput.addEventListener('input', () => {
 /**
  * Show a loaded image as the background, cropped to defaultCrop (image px)
  */
-function setBackground(img, label, defaultCrop) {
+function setBackground(img, label, defaultCrop, isBioglow = false) {
     state.backgroundImage = img;
+    state.bgIsBioglow = isBioglow;
     state.bgDefaultCrop = defaultCrop;
     bgSource.textContent = `${label} (${img.naturalWidth} × ${img.naturalHeight} px)`;
     bgSettings.classList.remove('hidden');
@@ -865,7 +875,7 @@ function loadBioglow(isStartup) {
     const img = new Image();
     img.onload = () => {
         bgFileInput.value = '';
-        setBackground(img, 'BIOGLOW wireframe, PDF page 2', BIOGLOW_CROP);
+        setBackground(img, 'BIOGLOW wireframe, PDF page 2', BIOGLOW_CROP, true);
     };
     img.onerror = () => {
         const msg = `Could not load ${BIOGLOW_IMAGE_URL}. Serve the project folder (python3 -m http.server 8000) or upload an image instead.`;
@@ -879,6 +889,7 @@ btnLoadBioglow.addEventListener('click', () => loadBioglow(false));
 
 btnRemoveBg.addEventListener('click', () => {
     state.backgroundImage = null;
+    state.bgIsBioglow = false;
     bgSettings.classList.add('hidden');
     btnRemoveBg.classList.add('hidden');
     bgFileInput.value = '';
@@ -1348,6 +1359,146 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ============================================================================
+// BIOGLOW MISSIONS (data in missions.js). Markers are labels, not collision shapes.
+// ============================================================================
+
+const missionShowInput = document.getElementById('mission-show');
+const missionSelect = document.getElementById('mission-select');
+const missionDetail = document.getElementById('mission-detail');
+let selectedMission = null;   // a mission number, 'other', or null
+
+/** Screen position of a marker. It is tied to the picture, so it follows the crop, orientation and mat position/rotation. */
+function missionMarkerScreen(m) {
+    const crop = { x: state.bgCropX, y: state.bgCropY, w: state.bgCropWidth, h: state.bgCropHeight };
+    const p = BioglowMissions.imagePxToMatMm(m.ix, m.iy, crop, state.bgOrientation, MAT_WIDTH, MAT_HEIGHT);
+    const a = -degToRad(state.matRotation);   // the mat turns clockwise on screen (drawMat), so counterclockwise is negative
+    return worldToScreen(
+        state.matX + MAT_WIDTH / 2 + p.x * Math.cos(a) - p.y * Math.sin(a),
+        state.matY + MAT_HEIGHT / 2 + p.x * Math.sin(a) + p.y * Math.cos(a));
+}
+
+function markerSelected(m) {
+    return typeof selectedMission === 'number' && m.missions.includes(selectedMission);
+}
+
+function drawMissions() {
+    const dimOthers = typeof selectedMission === 'number';
+    ctx.save();
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const m of BioglowMissions.MARKERS) {
+        const sel = markerSelected(m);
+        const [sx, sy] = missionMarkerScreen(m);
+        const h = sel ? 26 : 22;
+        const w = Math.max(h, ctx.measureText(m.label).width + 12);
+        ctx.globalAlpha = dimOthers && !sel ? 0.5 : 1;
+        ctx.beginPath();
+        ctx.roundRect(sx - w / 2, sy - h / 2, w, h, h / 2);
+        if (m.kind === 'area') {
+            ctx.fillStyle = 'rgba(10, 10, 26, 0.55)';   // hollow dashed pill: a marked area, not a model
+            ctx.setLineDash([4, 3]);
+        } else {
+            ctx.fillStyle = m.kind === 'dock' ? '#6c5ce7' : '#1e8e3e';
+        }
+        ctx.fill();
+        ctx.strokeStyle = sel ? '#feca57' : '#ffffff';
+        ctx.lineWidth = sel ? 3 : 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(m.label, sx, sy + 1);
+        if (sel) {
+            const mission = BioglowMissions.MISSIONS.find((x) => x.id === selectedMission);
+            const tag = m.dock ? `${m.dock} (Missions 13-15)` : `${String(mission.id).padStart(2, '0')} ${mission.name}`;
+            ctx.textAlign = 'left';
+            const tw = ctx.measureText(tag).width;
+            const tx = sx + w / 2 + 4 + tw + 10 > canvas.width ? sx - w / 2 - 4 - tw - 10 : sx + w / 2 + 4;   // flip left near the right edge
+            ctx.fillStyle = 'rgba(10, 10, 26, 0.85)';
+            ctx.fillRect(tx, sy - 10, tw + 10, 20);
+            ctx.fillStyle = '#feca57';
+            ctx.fillText(tag, tx + 5, sy + 1);
+            ctx.textAlign = 'center';
+        }
+    }
+    ctx.restore();
+}
+
+function pickMissionAt(sx, sy) {
+    for (const m of BioglowMissions.MARKERS) {
+        const [mx, my] = missionMarkerScreen(m);
+        if (Math.hypot(sx - mx, sy - my) <= 16) {
+            selectMission(String(m.missions[0]));
+            return;
+        }
+    }
+}
+
+function el(tag, text, className) {
+    const e = document.createElement(tag);
+    if (text) e.textContent = text;
+    if (className) e.className = className;
+    return e;
+}
+
+function addList(parent, items, className) {
+    const ul = el('ul', '', className);
+    items.forEach((t) => ul.appendChild(el('li', t)));
+    parent.appendChild(ul);
+}
+
+function renderMissionDetail() {
+    missionDetail.replaceChildren();
+    if (selectedMission === null) return;
+    if (selectedMission === 'other') {
+        missionDetail.appendChild(el('h4', 'Other scoring'));
+        addList(missionDetail, BioglowMissions.OTHER_SCORING);
+        return;
+    }
+    const m = BioglowMissions.MISSIONS.find((x) => x.id === selectedMission);
+    missionDetail.appendChild(el('h4', `Mission ${String(m.id).padStart(2, '0')}: ${m.name}`));
+    const tags = [`Rulebook p. ${m.page}`];
+    if (m.noEquipment) tags.push('No Equipment Constraint');
+    if (m.interchangeable) tags.push('interchangeable dock model');
+    missionDetail.appendChild(el('p', tags.join(' · '), 'note'));
+    addList(missionDetail, m.scoring.map((s) =>
+        `${s.bonus ? '+' : ''}${s.points}${s.each ? ` each${s.eachWhat ? ' ' + s.eachWhat : ''}` : ''}${s.bonus ? ' bonus' : ''}: ${s.text}`));
+    if (m.notes) addList(missionDetail, m.notes, 'note');
+    if (m.updates) addList(missionDetail, m.updates.map((u) => `Challenge Update: ${u}`), 'warning');
+    missionDetail.appendChild(el('p', 'Where on the mat (approximate, from the wireframe):', 'note'));
+    addList(missionDetail, BioglowMissions.markersFor(m.id).map((mk) => {
+        const p = BioglowMissions.imagePxToMatMm(mk.ix, mk.iy, BIOGLOW_CROP, 0, MAT_WIDTH, MAT_HEIGHT);
+        return `${mk.dock ? mk.dock + ' ' : ''}${mk.label} (${mk.kind}, ${mk.confidence} confidence): about x ${Math.round(p.x + MAT_WIDTH / 2)} mm, ` +
+            `y ${Math.round(p.y + MAT_HEIGHT / 2)} mm from the mat's bottom-left. ${mk.basis}`;
+    }), 'note');
+}
+
+function selectMission(value) {
+    missionSelect.value = value;
+    selectedMission = value === '' ? null : value === 'other' ? 'other' : Number(value);
+    renderMissionDetail();
+    render();
+}
+
+function buildMissionPanel() {
+    const add = (value, text) => {
+        const o = el('option', text);
+        o.value = value;
+        missionSelect.appendChild(o);
+    };
+    add('', 'Choose a mission…');
+    BioglowMissions.MISSIONS.forEach((m) => add(String(m.id), `${String(m.id).padStart(2, '0')} ${m.name}`));
+    add('other', 'Other scoring (inspection, tokens)');
+}
+
+missionSelect.addEventListener('change', () => selectMission(missionSelect.value));
+
+missionShowInput.addEventListener('change', () => {
+    state.showMissions = missionShowInput.checked;
+    render();
+});
+
+// ============================================================================
 // GRID CONTROLS
 // ============================================================================
 
@@ -1391,6 +1542,7 @@ function init() {
     
     // Show the BIOGLOW wireframe by default
     loadBioglow(true);
+    buildMissionPanel();
 }
 
 // Start the application
