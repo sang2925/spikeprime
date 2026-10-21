@@ -1233,9 +1233,12 @@ function updateProgramView() {
     }
 }
 
-programFileInput.addEventListener('change', async () => {
-    const file = programFileInput.files[0];
-    if (!file) return;
+async function loadProgramFile(file) {
+    if (SimPhysics.isActive(sim)) {
+        programInfo.textContent = `Not opened ${file.name}: press Stop first, then drop the file again.`;
+        programInfo.className = 'warning';
+        return;
+    }
     try {
         const { target, manifest } = await Llsp3.readLlsp3(new Uint8Array(await file.arrayBuffer()));
         const program = WordBlocks.compileProgram(target);
@@ -1247,14 +1250,51 @@ programFileInput.addEventListener('change', async () => {
         if (program.emptyStarts) extra.push(`${program.emptyStarts} empty start block(s)`);
         if (program.looseStacks) extra.push(`${program.looseStacks} loose stack(s), not run`);
         programInfo.textContent = `${file.name}${manifest && manifest.name ? ` ("${manifest.name}")` : ''}: ` +
-            program.stacks.map((s) => `${s.items.length} blocks`).join(' + ') + (extra.length ? `; ${extra.join('; ')}` : '');
+            program.stacks.map((s) => `${s.items.length} blocks`).join(' + ') + (extra.length ? `; ${extra.join('; ')}` : '') +
+            '. Place the robot, then click Run program.';
         programInfo.className = 'info';
     } catch (e) {
         programInfo.textContent = `Could not open ${file.name}: ${e.message} The previous program is still loaded.`;
         programInfo.className = 'warning';
     }
-    programFileInput.value = '';
     afterSimChange();
+}
+
+programFileInput.addEventListener('change', async () => {
+    const file = programFileInput.files[0];
+    if (!file) return;
+    await loadProgramFile(file);
+    programFileInput.value = '';
+});
+
+// Drop a .llsp3 anywhere on the page. preventDefault stops the browser from opening the file instead.
+let dragDepth = 0;
+document.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+    e.preventDefault();
+    dragDepth++;
+    document.body.classList.add('file-over');
+});
+document.addEventListener('dragover', (e) => {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) e.preventDefault();
+});
+document.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) document.body.classList.remove('file-over');
+});
+document.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    dragDepth = 0;
+    document.body.classList.remove('file-over');
+    const files = Array.from(e.dataTransfer.files);
+    const file = files.find((f) => /\.llsp3$/i.test(f.name));
+    if (!file) {
+        programInfo.textContent = `Not opened ${files[0].name}: drop a .llsp3 file.`;
+        programInfo.className = 'warning';
+        return;
+    }
+    await loadProgramFile(file);
 });
 
 /** Reset to the saved start pose, then run the loaded program. stepMode pauses as soon as the first block starts. */

@@ -52,7 +52,7 @@ A local, offline-capable browser-based simulator for LEGO SPIKE Prime FIRST LEGO
 ## Running a SPIKE Program (.llsp3)
 
 1. Put the robot where it starts on the mat: drag it to move it, and use **⟲ Turn left 90°** / **⟳ Turn right 90°** to turn it. For other angles, type the heading. You can use a different start every run. The next **Run program** starts from where you put it and saves that as the start pose. (The robot is locked while a program is running or paused: press **Stop** first.)
-2. In **Program (.llsp3)**, click **Choose File** and pick a project, such as `Harrison_Lucas_Kai_leafcutter_gyro.llsp3`. The file is only read.
+2. Open your project: **drag the `.llsp3` file onto the page** (anywhere), or in **Program (.llsp3)** click **Choose File**, for example `Harrison_Lucas_Kai_leafcutter_gyro.llsp3`. The file is only read. Dropping only opens it; it does not start it, so you can place the robot first. A drop is refused while a program is running (press **Stop** first), and anything that is not a `.llsp3` file is ignored with a message.
 3. Click **Run program**. The robot goes back to the start pose and runs the whole program. Running it again without moving the robot starts from the same place, not from where the last run ended. The running block is highlighted in red. **Now:** shows the block inside the My Block, for example `turn 67 › repeat until abs(yaw) > (abs(degrees) - 1)`.
 4. Or click **Next block** to go one block at a time. The robot stops each time a new main block starts. Use **Step 5 ms** (in Run Controls) to go even slower.
 5. Watch the Word Blocks yaw, the motor positions, and any **NOTE** lines (blocks the simulator cannot do).
@@ -81,7 +81,7 @@ Things the simulator found in the team's own blocks (simulated, not tested on th
 
 1. **Open the simulator:**
    - From the project root run `python3 -m http.server 8000`, then open `http://localhost:8000/simulator/`
-   - Use the server for the built-in BIOGLOW image. Opening `index.html` straight from the folder (`file://`) was not tested.
+   - You can also double-click `index.html`. Drag-and-drop and the BIOGLOW picture worked from a `file://` page in Chrome launched with `--allow-file-access-from-files`; plain Chrome without that flag was not tested.
 
 2. **Add a background:**
    - The BIOGLOW wireframe loads by itself when the page opens. After **Remove Background** or an upload, click **Load BIOGLOW Wireframe** to bring it back. Or click "Choose File" and pick a PNG/JPG of your mat

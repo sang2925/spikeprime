@@ -172,6 +172,22 @@ table td:last-child {
     cursor: grabbing;
 }
 
+
+body.file-over::after {
+    content: "Drop the .llsp3 file to open it";
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    font-weight: bold;
+    color: white;
+    background: rgba(233, 69, 96, 0.35);
+    border: 6px dashed white;
+    pointer-events: none;
+    z-index: 10;
+}
 .hidden {
     display: none !important;
 }
