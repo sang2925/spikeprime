@@ -97,11 +97,13 @@ The following records were supplied by the user and are dated 2026-10-14 unless 
 | `docs/IfThenBlocks.md` | User-added Prime Lessons SPIKE 3 reference. |
 | `docs/SP3AccurateTurning.md` | User-added turning reference. Check before replacing turning logic. |
 | `docs/SP3GyroMoveStraight.md` | User-added straight-driving reference. Check before replacing straight logic. |
-| `docs/leafcutter_path_drawing.png` | User's red path drawing on the mat. |
-| `docs/leafcutter_stall_spot.png` | User's marked location for the unresolved drift issue. |
+| `docs/leafcutter_path_drawing.png` | User's red path drawing on the mat. Not in the folder on 2026-10-21. |
+| `docs/leafcutter_stall_spot.png` | User's marked location for the unresolved drift issue. Not in the folder on 2026-10-21. |
+| `docs/SP3Variables.md` | User-added variables reference (present 2026-10-21). |
 | `paths/` | Regenerable path pictures from the existing simulator. |
 | `tools/` | Existing simulator and Bluetooth hub tools. Inspect before using. |
-| `simulator/` | Preferred location for the new browser application. |
+| `simulator/` | Browser simulator. Status in section 14, "Status (2026-10-21)". User guide: `simulator/README.md`. |
+| `.gitignore` | Added 2026-10-21. See section 26. |
 
 ### Gyro mission conversion
 
@@ -1076,6 +1078,53 @@ Complete A through D in order.
 
 Do not stop after every milestone to ask permission unless a consequential ambiguity or protected-file change requires it.
 
+### Status (2026-10-21)
+
+Built by the coding assistant on 2026-10-21. Simulated and browser-tested only. Nothing was tested on the robot or the hub.
+
+| Item | State |
+|---|---|
+| A. Board, background, placement | Done |
+| B. Physics, drive settings, gyro, encoders, movement-test panel | Done |
+| `.llsp3` program runner (read-only import, step by step) | Done, at the user's request ahead of C |
+| C. Editable command list, translation | Not started |
+| D. Collisions, save/load, examples | Not started. UI shows "Boundary and obstacle collisions are not enforced yet." |
+
+Files: `simulator/index.html`, `styles.css`, `app.js` (UI), `physics.js` (no DOM), `llsp3.js` (ZIP reader, no DOM), `wordblocks.js` (Word Blocks interpreter, no DOM), `tools/pdf_render.swift`, `assets/`, `tests/`, `test-results/`.
+
+Run: `python3 -m http.server 8000` from the project root, open `http://localhost:8000/simulator/`. Tests: `node --test tests/` from `simulator/` (32 pass on 2026-10-21). Evidence logs: `simulator/test-results/milestone-b-checks.md`, `program-runner-checks.md`.
+
+Background:
+
+- `simulator/assets/bioglow-wireframe-grid.pdf`: downloaded 2026-10-21, 904,815 bytes, 2 pages, SHA-256 `33231bb977f1e93abc8a1c31986705c8dd5cec8e321f8dc8d879e42934939244`. Keep unchanged.
+- Page 2 rendered to `bioglow-wireframe-page2-300dpi.png` with macOS PDFKit (`tools/pdf_render.swift`). Loads automatically.
+- Measured mat border crop: 166, 636, 2967 × 1689 px. Its shape is 1.757; the configured mat is 1.777 (1.1% off). Drawn unstretched at 1996.7 × 1136.65 mm, centred. The PDF is a diagram, not exact scale.
+
+Physics and settings:
+
+- Fixed 5 ms step, exact-arc integration. Playback changes only steps per frame. Hidden tab pauses.
+- Defaults: wheel 65.3 mm (from team's 20.5 cm per wheel turn); track width 112 mm, gear 1, 1050 deg/s at 100%, encoder signs +1/+1 are examples or estimates.
+
+Program runner:
+
+- Runs the real blocks, including the bodies of `straight` and `turn`. It does not guess what a My Block means. Unsupported blocks are skipped with a NOTE.
+- Assumptions shown in the UI: port B = simulator left wheel, A = right (the only layout matching "BA drives forward" plus "turn 90 turns right"); pair AB therefore drives backward; one loop pass = one 5 ms step; yaw 0.1° steps wrapping at ±180°; motor positions whole degrees; speeds clamped to ±100%.
+- Plain-move mode: "Drive the cm asked" (default) or "Team guess: 17.5 cm per wheel turn". The `straight` helper is never corrected.
+- Run program uses the robot's current hand-placed pose as the new start pose, otherwise the saved start. Robot placement: drag to move, ⟲/⟳ 90° buttons or typed heading to turn.
+
+Findings (simulated, not robot-tested):
+
+- `turn 0` is a no-op (0.2 s wait).
+- `turn` with more than 180 degrees never finishes because yaw wraps at ±180°; the simulator faults after 300 s.
+- Ideal motors stop each `turn N` between N - 1 and N - 0.5 degrees. The recorded hub replay stopped 1-2° past N. Simulated routes therefore turn slightly less than the real robot.
+
+Open items:
+
+- Track width needs a ruler measurement.
+- Mat rotation pivots on the mat centre and turns screen-clockwise; section 14 asks for the bottom-left corner. Not changed.
+- No body offset or attachment footprint yet.
+- A "keeps rolling after stop" setting would need a measured, approved `turn 90` mat test.
+
 ## 15. Simulator validation
 
 Test where practical:
@@ -1403,4 +1452,15 @@ Deliver files when tools permit.
 Do not claim a file exists until it has been created and verified.
 
 Do not claim success beyond the evidence.
+
+## 26. Version control
+
+Set up on 2026-10-21:
+
+- Git repository at the project root, branch `main`. First commit `37990ca` (all 53 files).
+- Repo identity: `Sebastian Ang <angdajiansebastian@gmail.com>` (local config). The global git email is a work address; do not use it here.
+- Remote: `git@github-sang2925:sang2925/spikeprime.git`. The repo must stay private: file names contain students' first names, and it holds FIRST's BIOGLOW PDF.
+- `github-sang2925` is a host alias in `~/.ssh/config` using `~/.ssh/id_ed25519_sang2925` (created 2026-10-21, no passphrase). Backup of the old config: `~/.ssh/config.bak-2026-10-21`. Plain `github.com` uses `id_ed25519`, which logs in as `sang2925-pnnl`.
+- First push not done yet: the public key still had to be added to the sang2925 GitHub account. Check with `ssh -T git@github-sang2925`, then `git push -u origin main`.
+- `.gitignore`: `.DS_Store`, `__pycache__/`, `*.pyc`, `node_modules/`, `*.tmp`.
 ````
