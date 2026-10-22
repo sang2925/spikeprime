@@ -40,8 +40,8 @@ const DEFAULT_GRID_MINOR = 50;   // mm
 const DEFAULT_GRID_MAJOR = 100;  // mm
 
 // Robot defaults (example dimensions)
-const DEFAULT_ROBOT_LENGTH = 180; // mm (forward/backward)
-const DEFAULT_ROBOT_WIDTH = 150;  // mm (left/right)
+const DEFAULT_ROBOT_LENGTH = 184.15; // mm (forward/backward), team measured 7 1/4 in
+const DEFAULT_ROBOT_WIDTH = 168.275;  // mm (left/right), team measured 6 5/8 in
 const DEFAULT_ROBOT_X = 1181.1;   // mm (centered on table)
 const DEFAULT_ROBOT_Y = 571.5;    // mm (centered on table)
 const DEFAULT_ROBOT_HEADING = 0;  // degrees
@@ -159,6 +159,7 @@ const driveGearRatioInput = document.getElementById('drive-gear-ratio');
 const driveMaxSpeedInput = document.getElementById('drive-max-speed');
 const driveLeftSignInput = document.getElementById('drive-left-sign');
 const driveRightSignInput = document.getElementById('drive-right-sign');
+const driveTurnOvershootInput = document.getElementById('drive-turn-overshoot');
 const driveErrors = document.getElementById('drive-errors');
 
 const testLeftInput = document.getElementById('test-left');
@@ -417,7 +418,8 @@ function render() {
     // Draw mat
     drawMat();
     
-    // Draw BIOGLOW mission markers (labels only)
+    // Draw optional obstacles, then BIOGLOW mission markers (labels only)
+    drawObstacles();
     if (state.bgIsBioglow && state.showMissions) drawMissions();
     
     // Draw traveled path
@@ -1044,11 +1046,45 @@ function updateLocks() {
     btnGyroReset.disabled = sim.status === 'running';
     programFileInput.disabled = active;
     programMoveModeInput.disabled = active;
+    drivePresetInput.disabled = active;
+    tableWallsInput.disabled = active;
+    obstacleInputs.forEach(({ box }) => { box.disabled = active; });
+    document.getElementById('obstacle-all-on').disabled = active;
+    document.getElementById('obstacle-all-off').disabled = active;
     btnProgramRun.disabled = active || !loadedProgram;
     btnProgramNext.disabled = !loadedProgram || (active && !(sim.program && sim.status === 'paused'));
 }
 
+const clearanceEl = document.getElementById('clearance');
+let lastClearanceKey = '';
+
+/** Closest approach table: built with textContent only (block names come from the opened .llsp3) */
+function updateClearanceView() {
+    const rows = Object.entries(sim.clearance).sort((a, b) => a[1].mm - b[1].mm).slice(0, 8);
+    const key = JSON.stringify(rows.map(([n, c]) => [n, c.mm.toFixed(1), c.timeS.toFixed(2)]));
+    if (key === lastClearanceKey) return;
+    lastClearanceKey = key;
+    clearanceEl.replaceChildren();
+    if (!rows.length) {
+        const tr = clearanceEl.insertRow();
+        tr.insertCell().textContent = 'Nothing yet: run a program or test.';
+        return;
+    }
+    const head = clearanceEl.insertRow();
+    ['Closest to', 'Gap', 'At', 'During'].forEach((h) => { const th = document.createElement('th'); th.textContent = h; head.append(th); });
+    for (const [name, c] of rows) {
+        const tr = clearanceEl.insertRow();
+        tr.insertCell().textContent = name.replace(/ \(.*\)$/, '');
+        const gap = tr.insertCell();
+        gap.textContent = c.mm < 0.05 ? 'touching' : `${c.mm.toFixed(1)} mm`;
+        if (c.mm < 1) gap.className = 'warning'; else if (c.mm < 10) gap.className = 'info';
+        tr.insertCell().textContent = `${c.timeS.toFixed(1)} s`;
+        tr.insertCell().textContent = c.block || '–';
+    }
+}
+
 function updateTelemetry() {
+    updateClearanceView();
     const { x, y, headingDeg } = sim.pose;
     telStatus.textContent = sim.status + (sim.status === 'paused' && pausedByHiddenTab ? ' (tab was hidden)' : '');
     telTime.textContent = `${sim.timeS.toFixed(3)} s`;
@@ -1058,8 +1094,8 @@ function updateTelemetry() {
     telGyro.textContent = `${SimPhysics.gyroDeg(sim).toFixed(2)}° (CCW +)`;
     telEncLeft.textContent = `${sim.encLeftDeg.toFixed(1)}°`;
     telEncRight.textContent = `${sim.encRightDeg.toFixed(1)}°`;
-    telFault.textContent = sim.fault;
-    telFault.classList.toggle('hidden', !sim.fault);
+    telFault.textContent = sim.fault || sim.contact;
+    telFault.classList.toggle('hidden', !(sim.fault || sim.contact));
 }
 
 /** Copy the simulated pose back to the placement state/inputs, then refresh everything */
@@ -1132,6 +1168,7 @@ btnTestStart.addEventListener('click', () => {
     }
     pausedByHiddenTab = false;
     movedByHand = false;
+    applyObstacles();
     const errors = SimPhysics.startTest(sim,
         parseFloat(testLeftInput.value), parseFloat(testRightInput.value), parseFloat(testDurationInput.value));
     afterSimChange();
@@ -1264,6 +1301,20 @@ async function loadProgramFile(file) {
             program.stacks.map((s) => `${s.items.length} blocks`).join(' + ') + (extra.length ? `; ${extra.join('; ')}` : '') +
             '. Place the robot, then click Run program.';
         programInfo.className = 'info';
+        const start = manifest && BioglowMissions.START_POSES[manifest.name];
+        if (start) {
+            state.robotX = start.x;
+            state.robotY = start.y;
+            state.robotHeading = start.heading;
+            robotXInput.value = start.x.toFixed(1);
+            robotYInput.value = start.y.toFixed(1);
+            robotHeadingInput.value = start.heading.toFixed(1);
+            render();
+            btnSavePose.click();
+            movedByHand = false;
+            programInfo.textContent = programInfo.textContent.replace('Place the robot, then click',
+                `Robot placed at this project's start (${start.source}). Drag it to change, or click`);
+        }
     } catch (e) {
         programInfo.textContent = `Could not open ${file.name}: ${e.message} The previous program is still loaded.`;
         programInfo.className = 'warning';
@@ -1310,6 +1361,11 @@ document.addEventListener('drop', async (e) => {
 
 /** Reset to the saved start pose, then run the loaded program. stepMode pauses as soon as the first block starts. */
 function runProgram(stepMode) {
+    const turnOvershootDeg = parseFloat(driveTurnOvershootInput.value);
+    if (!(turnOvershootDeg >= 0 && turnOvershootDeg <= 45)) {
+        showDriveErrors(['Turn overshoot must be a number from 0 to 45°.']);
+        return;
+    }
     SimPhysics.setProfile(sim, readProfile());
     SimPhysics.placeRobot(sim, poseFromState());
     if (!state.startPose || movedByHand) {
@@ -1321,8 +1377,10 @@ function runProgram(stepMode) {
     SimPhysics.resetSim(sim, { x: sp.x, y: sp.y, headingDeg: sp.heading });
     pausedByHiddenTab = false;
     stepPauseKeys = stepMode ? new Set() : null;
+    applyObstacles();
     const runner = WordBlocks.createRunner(loadedProgram, {
         plainMoveMode: programMoveModeInput.value,
+        turnOvershootDeg,
         onTopBlock: (t, i) => {
             if (stepPauseKeys && !stepPauseKeys.has(`${t}:${i}`)) {
                 stepPauseKeys = null;
@@ -1497,6 +1555,79 @@ missionShowInput.addEventListener('change', () => {
     state.showMissions = missionShowInput.checked;
     render();
 });
+
+// Table walls and optional obstacles (missions.js OBSTACLES). Obstacles are fixed to the BIOGLOW wireframe, so they follow the mat, not the background crop.
+const tableWallsInput = document.getElementById('table-walls');
+const obstacleListEl = document.getElementById('obstacle-list');
+const obstacleInputs = BioglowMissions.OBSTACLES.map((o) => {
+    const row = document.createElement('div');
+    row.className = 'control-row';
+    const label = document.createElement('label');
+    label.htmlFor = `obstacle-${o.key}`;
+    label.textContent = o.name;
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.id = `obstacle-${o.key}`;
+    row.append(label, box);
+    obstacleListEl.append(row);
+    return { o, box };
+});
+
+function wireframePxToWorld(ix, iy) {
+    const p = BioglowMissions.imagePxToMatMm(ix, iy, BIOGLOW_CROP, 0, MAT_WIDTH, MAT_HEIGHT);
+    const a = -degToRad(state.matRotation);   // same turn as missionMarkerScreen
+    return [state.matX + MAT_WIDTH / 2 + p.x * Math.cos(a) - p.y * Math.sin(a),
+        state.matY + MAT_HEIGHT / 2 + p.x * Math.sin(a) + p.y * Math.cos(a)];
+}
+
+/** Hand the table walls, the ticked obstacles and the current body size to the physics (not during a run) */
+function applyObstacles() {
+    const obstacles = obstacleInputs.filter(({ box }) => box.checked)
+        .map(({ o }) => ({ name: o.name, poly: o.corners.map(([ix, iy]) => wireframePxToWorld(ix, iy)) }));
+    const bounds = tableWallsInput.checked ? { minX: 0, minY: 0, maxX: TABLE_INTERIOR_X, maxY: TABLE_INTERIOR_Y } : null;
+    SimPhysics.setObstacles(sim, obstacles, { lengthMm: state.robotLength, widthMm: state.robotWidth }, bounds);
+}
+
+function drawObstacles() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(233, 69, 96, 0.35)';
+    ctx.strokeStyle = '#e94560';
+    ctx.lineWidth = 2;
+    for (const o of sim.obstacles) {
+        ctx.beginPath();
+        o.poly.forEach(([x, y], i) => { const [sx, sy] = worldToScreen(x, y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+// Robot profile: the two "how the real robot differs from perfect" estimates, set together
+const drivePresetInput = document.getElementById('drive-preset');
+const PRESETS = { team: { moveMode: 'app-guess', turnOvershootDeg: 5 }, ideal: { moveMode: 'commanded', turnOvershootDeg: 0 } };
+drivePresetInput.addEventListener('change', () => {
+    const p = PRESETS[drivePresetInput.value];
+    if (!p) return;
+    programMoveModeInput.value = p.moveMode;
+    driveTurnOvershootInput.value = String(p.turnOvershootDeg);
+});
+function markPresetCustom() {
+    const match = Object.keys(PRESETS).find((k) => PRESETS[k].moveMode === programMoveModeInput.value
+        && PRESETS[k].turnOvershootDeg === parseFloat(driveTurnOvershootInput.value));
+    drivePresetInput.value = match || 'custom';
+}
+programMoveModeInput.addEventListener('change', markPresetCustom);
+driveTurnOvershootInput.addEventListener('input', markPresetCustom);
+
+function obstaclesChanged() {
+    applyObstacles();
+    afterSimChange();
+}
+tableWallsInput.addEventListener('change', obstaclesChanged);
+obstacleInputs.forEach(({ box }) => box.addEventListener('change', obstaclesChanged));
+document.getElementById('obstacle-all-on').addEventListener('click', () => { obstacleInputs.forEach(({ box }) => { box.checked = true; }); obstaclesChanged(); });
+document.getElementById('obstacle-all-off').addEventListener('click', () => { obstacleInputs.forEach(({ box }) => { box.checked = false; }); obstaclesChanged(); });
 
 // ============================================================================
 // GRID CONTROLS

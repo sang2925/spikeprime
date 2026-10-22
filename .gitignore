@@ -11,3 +11,9 @@ node_modules/
 # Temporary files from safe .llsp3 writes (see AGENTS.md section 10)
 *.tmp
 simulator/test-results/*
+
+# Team videos stay on this computer only (students' faces/voices, large files)
+videos/
+
+# Local SPIKE check output and its saved Chrome profile (tools/spike_open_check.mjs)
+test-results/

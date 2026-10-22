@@ -207,7 +207,51 @@
     function markersFor(missionId) {
         return MARKERS.filter((m) => m.missions.includes(missionId));
     }
-    const BioglowMissions = { IMAGE, MISSIONS, MARKERS, OTHER_SCORING, imagePxToMatMm, markersFor };
+
+    /**
+     * Optional obstacles (off by default). Corners are picture pixels of the wireframe, read 2026-10-21/22 from zoomed
+     * crops with a ruler grid (good to about 5 px, about 3 mm; the picture is a diagram, not exact scale).
+     * Estimates: the real models' levers, plants and wires stick out past the outline, and thin arms are left out
+     * (08·09). Diagonal models use the outline's convex hull, so empty corners count as solid. Floor-flat things
+     * (printed black lines, launch-area shapes) are not included. The robot also touches 06·07 and 11 on purpose.
+     */
+    const circle = (cx, cy, r, n = 12) => Array.from({ length: n }, (_, i) => [cx + r * Math.cos(2 * Math.PI * i / n), cy + r * Math.sin(2 * Math.PI * i / n)]);
+    const rect = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    const OBSTACLES = [
+        { key: 'm11', name: 'Mission 11 model (wireframe outline, estimate)', missions: [11],
+            corners: [[2256, 1363], [2336, 1443], [2251, 1527], [2172, 1447]] },
+        { key: 'm0607', name: 'Missions 06 and 07 model (leafcutter, estimate)', missions: [6, 7],
+            corners: [[2435, 643], [2566, 736], [2566, 784], [2402, 828], [2334, 744]] },
+        { key: 'm02', name: 'Mission 02 model (estimate)', missions: [2],
+            corners: [[1101, 1476], [1118, 1476], [1160, 1518], [1160, 1535], [1118, 1577], [1101, 1577], [1059, 1535], [1059, 1518]] },
+        { key: 'm03', name: 'Mission 03 model (estimate)', missions: [3], corners: rect(195, 1303, 375, 1399) },
+        { key: 'm04', name: 'Mission 04 model (estimate)', missions: [4],
+            corners: [[381, 715], [427, 715], [440, 739], [440, 910], [270, 910], [246, 897], [246, 850], [276, 778], [309, 745]] },
+        { key: 'm05', name: 'Mission 05 model (estimate)', missions: [5], corners: [[734, 643], [794, 643], [794, 774], [781, 774], [734, 726]] },
+        { key: 'm0809', name: 'Missions 08 and 09 model, body only (estimate)', missions: [8, 9], corners: rect(947, 680, 1098, 800) },
+        { key: 'm10a', name: 'Mission 10 model, upper (estimate)', missions: [10],
+            corners: [[1272, 740], [1294, 736], [1307, 758], [1281, 805], [1252, 785], [1250, 760]] },
+        { key: 'm10b', name: 'Mission 10 model, lower (estimate)', missions: [10], corners: rect(1672, 1225, 1748, 1285) },
+        { key: 'm12a', name: 'Mission 12 model, upper (estimate)', missions: [12], corners: circle(3043, 1204, 48) },
+        { key: 'm12b', name: 'Mission 12 part, lower (estimate)', missions: [12], corners: rect(3025, 1472, 3061, 1562) },
+        { key: 'm01', name: 'Mission 01 model, drone pad (estimate)', missions: [1], corners: circle(1875, 2243, 48) },
+        { key: 'd1', name: 'D1 dock (estimate)', missions: [], corners: [[3001, 684], [3077, 778], [2951, 904], [2858, 828], [2858, 811]] },
+        { key: 'd2', name: 'D2 dock (estimate)', missions: [], corners: rect(1584, 1295, 1716, 1499) },
+        { key: 'd3', name: 'D3 dock (estimate)', missions: [], corners: rect(1999, 2089, 2130, 2292) },
+    ];
+
+    /**
+     * Start poses (world mm, heading ° counterclockwise from right), keyed by the project name in manifest.json.
+     * Opening that project places the robot there and saves it as the start pose.
+     */
+    const START_POSES = {
+        // Measured on the first video frame against the printed launch-area edge strip (ticks every 10 cm from the
+        // bottom-right mat corner): robot sides at about 19 and 38 cm from the bottom wall, back on the mat's right edge.
+        'gyro-mission6-7-11': { x: 2099, y: 286, heading: 180,
+            source: 'measured from the team video gyro_run1.MOV against the launch-area edge marks, about ±2 cm (estimate)' },
+    };
+
+    const BioglowMissions = { IMAGE, MISSIONS, MARKERS, OTHER_SCORING, OBSTACLES, START_POSES, imagePxToMatMm, markersFor };
     if (typeof module !== 'undefined' && module.exports) module.exports = BioglowMissions;
     else root.BioglowMissions = BioglowMissions;
 })(this);

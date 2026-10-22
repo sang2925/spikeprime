@@ -6,6 +6,7 @@
  * Pose = midpoint between the two drive wheels.
  * Logical wheel speed: +% rolls that wheel forward. Motor mounting direction only changes encoder signs.
  * Ideal motion: no slip, no noise, no overshoot.
+ * Optional obstacles (convex polygons, mm) and table walls (a rectangle, mm): if the robot body would touch one, the step is undone and the run pauses.
  */
 (function (root) {
     'use strict';
@@ -79,7 +80,110 @@
             test: null,
             program: null,     // Word Blocks runner (wordblocks.js) while a program runs
             path: [[pose.x, pose.y]],  // null entries = break (robot placed by hand)
+            obstacles: [],     // [{ name, poly: [[x, y], ...] }] convex, mm; empty = no collisions
+            bounds: null,      // { minX, minY, maxX, maxY } table interior, mm; null = no walls
+            body: null,        // { lengthMm, widthMm } centred on the wheel midpoint; needed when obstacles or bounds are set
+            contact: '',       // which obstacle stopped the robot
+            clearance: {},     // closest approach so far this run: { name: { mm, timeS, pose, step } } (walls and ticked obstacles)
         };
+    }
+
+    /** Corners of the robot body (centred on the wheel midpoint; no body offset yet) */
+    function bodyCorners(pose, body) {
+        const h = pose.headingDeg * Math.PI / 180, c = Math.cos(h), s = Math.sin(h);
+        const l = body.lengthMm / 2, w = body.widthMm / 2;
+        return [[l, w], [-l, w], [-l, -w], [l, -w]].map(([f, side]) => [pose.x + f * c - side * s, pose.y + f * s + side * c]);
+    }
+
+    /** Separating-axis test for two convex polygons (touching counts as overlap) */
+    function convexOverlap(a, b) {
+        for (const poly of [a, b]) {
+            for (let i = 0; i < poly.length; i++) {
+                const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+                const nx = y1 - y2, ny = x2 - x1;
+                const span = (p) => p.map(([x, y]) => x * nx + y * ny);
+                const pa = span(a), pb = span(b);
+                if (Math.max(...pa) < Math.min(...pb) || Math.max(...pb) < Math.min(...pa)) return false;
+            }
+        }
+        return true;
+    }
+
+    /** Name of the wall or obstacle the robot body touches, or ''. A body corner exactly on a wall is still inside. */
+    function touching(sim) {
+        if (!sim.body || (!sim.obstacles.length && !sim.bounds)) return '';
+        const robot = bodyCorners(sim.pose, sim.body);
+        const b = sim.bounds;
+        if (b) {
+            const xs = robot.map((c) => c[0]), ys = robot.map((c) => c[1]);
+            if (Math.min(...xs) < b.minX) return 'the left table wall';
+            if (Math.max(...xs) > b.maxX) return 'the right table wall';
+            if (Math.min(...ys) < b.minY) return 'the bottom table wall';
+            if (Math.max(...ys) > b.maxY) return 'the top table wall';
+        }
+        const hit = sim.obstacles.find((o) => convexOverlap(robot, o.poly));
+        return hit ? hit.name : '';
+    }
+
+    /** bounds (optional): the table interior rectangle { minX, minY, maxX, maxY } in mm; null/omitted = no walls */
+    /** Shortest distance from point (px, py) to the segment a-b */
+    function pointSegmentDist(px, py, [ax, ay], [bx, by]) {
+        const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+        const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+        return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+    }
+
+    /** Gap between two convex polygons that do not overlap (0 if they touch): the shortest corner-to-edge distance */
+    function polygonGap(a, b) {
+        let best = Infinity;
+        for (const [p, q] of [[a, b], [b, a]]) {
+            for (const [px, py] of p) {
+                for (let i = 0; i < q.length; i++) best = Math.min(best, pointSegmentDist(px, py, q[i], q[(i + 1) % q.length]));
+            }
+        }
+        return best;
+    }
+
+    /** What the program is doing now (its top-level block), for the closest-approach readout */
+    function activeBlockLabel(sim) {
+        const threads = (sim.program && sim.program.threads) || [];
+        const t = threads.find((x) => !x.done && x.path && x.path.length);
+        return t ? t.path[0] : '';
+    }
+
+    /** Remember the smallest gap to each wall and ticked obstacle. Called after every accepted step. */
+    function updateClearance(sim) {
+        if (!sim.body || (!sim.obstacles.length && !sim.bounds)) return;
+        const robot = bodyCorners(sim.pose, sim.body);
+        const note = (name, mm) => {
+            const old = sim.clearance[name];
+            if (old && old.mm <= mm) return;
+            sim.clearance[name] = { mm, timeS: sim.timeS, pose: { ...sim.pose }, block: activeBlockLabel(sim) };
+        };
+        const b = sim.bounds;
+        if (b) {
+            const xs = robot.map((c) => c[0]), ys = robot.map((c) => c[1]);
+            note('the left table wall', Math.min(...xs) - b.minX);
+            note('the right table wall', b.maxX - Math.max(...xs));
+            note('the bottom table wall', Math.min(...ys) - b.minY);
+            note('the top table wall', b.maxY - Math.max(...ys));
+        }
+        for (const o of sim.obstacles) note(o.name, polygonGap(robot, o.poly));
+    }
+
+    function setObstacles(sim, obstacles, body, bounds) {
+        if (isActive(sim)) return ['Obstacles cannot change during a run.'];
+        sim.obstacles = obstacles.map((o) => ({ name: o.name, poly: o.poly.map(([x, y]) => [x, y]) }));
+        sim.body = body ? { lengthMm: body.lengthMm, widthMm: body.widthMm } : null;
+        sim.bounds = bounds ? { minX: bounds.minX, minY: bounds.minY, maxX: bounds.maxX, maxY: bounds.maxY } : null;
+        sim.contact = '';
+        sim.clearance = {};
+        return [];
+    }
+
+    function startTouchingErrors(sim) {
+        const name = touching(sim);
+        return name ? [`The robot starts touching ${name}. Move it clear first.`] : [];
     }
 
     function isActive(sim) {
@@ -97,7 +201,7 @@
     /** Start a bounded wheel-speed test. Returns [] on success, else error messages (status becomes fault). */
     function startTest(sim, leftPct, rightPct, durationS) {
         if (isActive(sim)) return ['A test is already active. Stop it first.'];
-        const errors = validateProfile(sim.profile).concat(validateTest(leftPct, rightPct, durationS));
+        const errors = validateProfile(sim.profile).concat(validateTest(leftPct, rightPct, durationS), startTouchingErrors(sim));
         if (errors.length) return fail(sim, errors);
         sim.test = {
             leftPct, rightPct, durationS,
@@ -115,12 +219,13 @@
      */
     function startProgram(sim, runner) {
         if (isActive(sim)) return ['A test or program is already active. Stop it first.'];
-        const errors = validateProfile(sim.profile);
+        const errors = validateProfile(sim.profile).concat(startTouchingErrors(sim));
         if (errors.length) return fail(sim, errors);
         runner.startTimeS = sim.timeS;
         sim.program = runner;
         sim.status = 'running';
         sim.fault = '';
+        sim.contact = '';
         return [];
     }
 
@@ -141,13 +246,26 @@
         pose.headingDeg += dth * 180 / Math.PI;
     }
 
-    /** Drive both wheels for dt; false (and fault) if the pose stops being a number */
+    /**
+     * Drive both wheels for dt; false (and fault) if the pose stops being a number.
+     * If the body would touch an obstacle, the step is undone (last safe pose, no encoder or time change) and the run pauses.
+     * A 5 ms step moves at most about 2 mm at 100%, far less than an obstacle is wide, so the robot cannot jump through one.
+     */
     function advance(sim, leftPct, rightPct, dt, forcePath) {
         const p = sim.profile;
+        const safe = { ...sim.pose };
         integrate(sim.pose, wheelSpeedMmPerS(p, leftPct), wheelSpeedMmPerS(p, rightPct), p.trackWidthMm, dt);
+        const hit = touching(sim);
+        if (hit) {
+            Object.assign(sim.pose, safe);
+            sim.contact = `Robot body touched ${hit} at ${sim.timeS.toFixed(2)} s, so the run paused. Wheels were at ${leftPct.toFixed(0)}% / ${rightPct.toFixed(0)}%. Resume tries the same step again.`;
+            sim.status = 'paused';
+            return false;
+        }
         sim.encLeftDeg += motorDegPerS(p, leftPct) * dt * p.leftMotorSign;
         sim.encRightDeg += motorDegPerS(p, rightPct) * dt * p.rightMotorSign;
         sim.timeS += dt;
+        updateClearance(sim);
         if (![sim.pose.x, sim.pose.y, sim.pose.headingDeg].every(Number.isFinite)) {
             fail(sim, ['Physics produced an invalid pose.']);
             return false;
@@ -163,8 +281,8 @@
         if (!t) return false;
         const last = t.stepsDone === t.stepsTotal - 1;
         const dt = last ? t.durationS - t.stepsDone * TIMESTEP_S : TIMESTEP_S;
-        t.stepsDone++;
         if (!advance(sim, t.leftPct, t.rightPct, dt, last)) return false;
+        t.stepsDone++;
         if (last) {
             sim.test = null;
             sim.status = 'stopped';
@@ -223,7 +341,11 @@
     }
 
     function pause(sim) { if (sim.status === 'running') sim.status = 'paused'; }
-    function resume(sim) { if (sim.status === 'paused') sim.status = 'running'; }
+    function resume(sim) {
+        if (sim.status !== 'paused') return;
+        sim.status = 'running';
+        sim.contact = '';
+    }
 
     /** One fixed step while paused */
     function stepOnce(sim) {
@@ -250,7 +372,7 @@
     /** Stop, put the robot at the start pose, clear timer, encoders, gyro reference, path and fault */
     function resetSim(sim, startPose) {
         const fresh = createSim(sim.profile, startPose);
-        Object.assign(sim, fresh);
+        Object.assign(sim, fresh, { obstacles: sim.obstacles, body: sim.body, bounds: sim.bounds });
     }
 
     /** Robot placed by hand while stopped: move the pose and break the path line */
@@ -280,7 +402,7 @@
         TIMESTEP_S, MAX_TEST_DURATION_S, MAX_PROGRAM_S, MAX_PLAYBACK, DEFAULT_PROFILE,
         validateProfile, validateTest, motorDegPerS, wheelSpeedMmPerS, normalizeHeading,
         createSim, isActive, startTest, startProgram, stepSim, runFrame, pause, resume, stepOnce, stop,
-        resetGyro, gyroDeg, resetSim, placeRobot, setProfile, clearPath,
+        resetGyro, gyroDeg, resetSim, placeRobot, setProfile, clearPath, setObstacles, touching, polygonGap,
     };
 
     if (typeof module !== 'undefined' && module.exports) module.exports = SimPhysics;

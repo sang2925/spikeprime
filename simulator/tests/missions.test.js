@@ -58,3 +58,33 @@ test('a marker keeps its place relative to the picture when the picture is turne
     near(b.x, -a.x, 1e-9, 'x flips');
     near(b.y, -a.y, 1e-9, 'y flips');
 });
+
+test('obstacle outlines: unique keys, convex, and every model sits inside the table', () => {
+    const MAT_W = 2019.3, MAT_H = 1136.65, MAT_X = 171.45;     // default mat placement (app.js)
+    const keys = new Set();
+    for (const o of B.OBSTACLES) {
+        assert.ok(!keys.has(o.key), `duplicate key ${o.key}`);
+        keys.add(o.key);
+        const c = o.corners, n = c.length;
+        assert.ok(n >= 3, o.key);
+        let sign = 0;
+        for (let i = 0; i < n; i++) {
+            const [x1, y1] = c[i], [x2, y2] = c[(i + 1) % n], [x3, y3] = c[(i + 2) % n];
+            const cross = (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2);
+            if (Math.abs(cross) < 1e-9) continue;
+            assert.ok(!sign || Math.sign(cross) === sign, `${o.key} is not convex (the collision test needs convex shapes)`);
+            sign = sign || Math.sign(cross);
+        }
+        for (const [ix, iy] of c) {
+            const p = B.imagePxToMatMm(ix, iy, B.IMAGE.matCrop, 0, MAT_W, MAT_H);
+            const x = MAT_X + MAT_W / 2 + p.x, y = MAT_H / 2 + p.y;
+            assert.ok(x > 0 && x < 2362.2 && y > 0 && y < 1143, `${o.key} corner (${ix}, ${iy}) is off the table at ${x.toFixed(0)}, ${y.toFixed(0)}`);
+        }
+    }
+    assert.ok(keys.has('m11') && keys.has('d2'));
+});
+
+test('START_POSES: the gyro-mission6-7-11 start is on the mat and clear of every model', () => {
+    const s = B.START_POSES['gyro-mission6-7-11'];
+    assert.ok(s && s.x > 171 && s.x < 2191 && s.y > 0 && s.y < 1137);
+});

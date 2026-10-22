@@ -34,8 +34,8 @@
                     <p id="program-info" class="info">No program loaded.</p>
                     <label for="program-move-mode" class="note">Plain "move N cm" blocks:</label>
                     <select id="program-move-mode">
-                        <option value="commanded" selected>Drive the cm asked</option>
-                        <option value="app-guess">Team guess: app thinks 17.5 cm per wheel turn</option>
+                        <option value="commanded">Drive the cm asked</option>
+                        <option value="app-guess" selected>Team guess: app thinks 17.5 cm per wheel turn</option>
                     </select>
                     <p class="note">The team <code>straight</code> My Block is never corrected: it already counts motor degrees.</p>
                     <div class="button-row">
@@ -73,20 +73,26 @@
                         <button id="btn-test-stop">Stop</button>
                         <button id="btn-sim-reset">Reset</button>
                     </div>
-                    <p class="warning">Boundary and obstacle collisions are not enforced yet.</p>
+                    <div class="control-row">
+                        <label for="table-walls">Table walls stop the robot:</label>
+                        <input type="checkbox" id="table-walls" checked>
+                    </div>
+                    <p class="note">The robot's whole body box counts, not just its centre. If any corner touches a wall (or a model ticked in BIOGLOW Missions), the run pauses. The body box is centred on the wheels until the body offset is measured.</p>
+                    <p class="note"><strong>Closest approach</strong> (walls and ticked models, nearest first). Gap = body box to the outline, in mm. Clears on Reset or when you tick or untick a model.</p>
+                    <table id="clearance"></table>
                 </details>
 
 
                 <details id="robot-controls" open>
                     <summary>Robot Placement</summary>
-                    <p class="note">Example dimensions — not team measurements. Drag the robot to move it. Use the 90° buttons to turn it.</p>
+                    <p class="note">Body size is the team's measurement (no attachments). Drag the robot to move it. Use the 90° buttons to turn it.</p>
                     <div class="control-row">
                         <label>Body length (mm):</label>
-                        <input type="number" id="robot-length" step="0.1" value="180">
+                        <input type="number" id="robot-length" step="0.1" value="184.15">
                     </div>
                     <div class="control-row">
                         <label>Body width (mm):</label>
-                        <input type="number" id="robot-width" step="0.1" value="150">
+                        <input type="number" id="robot-width" step="0.1" value="168.275">
                     </div>
                     <div class="control-row">
                         <label>Position X (mm):</label>
@@ -150,10 +156,26 @@
                     <select id="mission-select"></select>
                     <div id="mission-detail"></div>
                     <p class="note">Markers are labels placed from the wireframe, good to about 15 mm. They are not collision shapes.</p>
+                    <p class="note"><strong>Models that stop the robot</strong> (all off to start with, all estimates). If the robot touches a ticked model, the run pauses.</p>
+                    <div class="button-row">
+                        <button id="obstacle-all-on">All on</button>
+                        <button id="obstacle-all-off">All off</button>
+                    </div>
+                    <div id="obstacle-list"></div>
+                    <p class="note">Outlines are read off the wireframe picture (good to about 5 mm). The real models' levers, plants and wires stick out further, and thin arms are left out. The robot touches Missions 06/07 and 11 on purpose, so ticking those will pause the run when it pushes them.</p>
                 </details>
 
                 <details id="drive-settings">
                     <summary>Drive Settings</summary>
+                    <div class="control-row">
+                        <label for="drive-preset">Robot profile:</label>
+                        <select id="drive-preset">
+                            <option value="team" selected>Team robot (estimates from the video)</option>
+                            <option value="ideal">Ideal robot (perfect turns and moves)</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <p class="note">Team robot = plain "move N cm" blocks drive 17.5-cm-per-wheel-turn too far (team record, 20.5 vs 17.5 cm) and every turn goes 5° too far (read from the gyro video). Both are estimates, not measurements. Ideal = the old simulator defaults. Changing either number by hand switches this to Custom.</p>
                     <p class="note">Wheel diameter is from the team record (about 20.5 cm per wheel turn). Everything else is an example or estimate, not a measurement of our robot.</p>
                     <div class="control-row">
                         <label>Wheel diameter (mm):</label>
@@ -180,6 +202,11 @@
                         <select id="drive-right-sign"><option value="1">+1</option><option value="-1">-1</option></select>
                     </div>
                     <p class="note">Encoder sign = which way the motor counts when its wheel rolls forward. It does not change which way the robot drives.</p>
+                    <div class="control-row">
+                        <label for="drive-turn-overshoot">Turn overshoot (° after each in-place turn, estimate):</label>
+                        <input type="number" id="drive-turn-overshoot" step="0.5" min="0" max="45" value="5">
+                    </div>
+                    <p class="note">Not measured (5 is read from the video). 0 = ideal motors that stop at once. Used only by .llsp3 programs: after "stop moving" ends a spin, the robot keeps turning this much further.</p>
                     <table>
                         <tr><td>Team movement pair:</td><td>BA</td></tr>
                         <tr><td>Which of A/B is left:</td><td>Not confirmed</td></tr>

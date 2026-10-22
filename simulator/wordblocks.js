@@ -164,17 +164,20 @@
      * options.plainMoveMode: 'commanded' (move N cm drives N cm) or 'app-guess'
      *   (the app turns cm into motor turns with its 17.5 cm guess; with a bigger wheel the robot goes further).
      * options.onTopBlock(threadIndex, itemIndex): called when a main-stack block starts.
+     * options.turnOvershootDeg: estimate, default 0. When "stop moving" ends an in-place spin (wheels turning opposite
+     *   ways), the robot keeps spinning this many more degrees before it stops.
      */
     function createRunner(program, options = {}) {
         const blocks = program.blocks;
         const runner = {
             leftPct: 0, rightPct: 0, fault: '', startTimeS: 0,
             pair: null, moveSpeed: DEFAULT_MOVE_SPEED,
-            motorSpeed: {}, attachment: {}, zero: { A: 0, B: 0 }, yawRefDeg: null,
+            motorSpeed: {}, attachment: {}, zero: { A: 0, B: 0 }, yawRefDeg: null, timerStartS: null,
             variables: { ...program.variables },
             notes: [],
             threads: [],
             plainMoveMode: options.plainMoveMode === 'app-guess' ? 'app-guess' : 'commanded',
+            turnOvershootDeg: Number.isFinite(options.turnOvershootDeg) && options.turnOvershootDeg > 0 ? options.turnOvershootDeg : 0,
             onTopBlock: options.onTopBlock || null,
             tick, wordYaw, portPosition,
         };
@@ -273,6 +276,7 @@
                     return axis === 'yaw' ? wordYaw() : 0;   // flat table: pitch and roll are 0
                 }
                 case 'flippermoremotor_position': return portPosition(String(evalInput(inp.PORT, ctx)));
+                case 'flippersensors_timer': return sim.timeS - (runner.timerStartS === null ? runner.startTimeS : runner.timerStartS);
                 case 'data_variable': return runner.variables[b.fields.VARIABLE[1]];
             }
             // Menu shadows (port, direction, pair pickers) hold their value in a field
@@ -317,6 +321,7 @@
                     runner.moveSpeed = clampSpeed(num(b, 'SPEED', ctx));
                     return;
                 case 'flippermove_stopMove':
+                    yield* overshootSpin();
                     setDrive(0, 0);
                     return;
                 case 'flippermoremove_startDualSpeed':
@@ -324,6 +329,9 @@
                     return;
                 case 'flippersensors_resetYaw':
                     runner.yawRefDeg = sim.pose.headingDeg;
+                    return;
+                case 'flippersensors_resetTimer':
+                    runner.timerStartS = sim.timeS;
                     return;
                 case 'flippermoremotor_motorSetDegreeCounted': {
                     const value = num(b, 'VALUE', ctx);
@@ -403,6 +411,19 @@
                 }
             }
             note(`not simulated: ${b.opcode} (skipped)`);
+        }
+
+        /**
+         * Turn-overshoot setting: after an in-place spin, keep the wheels turning until the robot has turned
+         * runner.turnOvershootDeg more. ponytail: the program waits for this coast, so the next block (often a
+         * yaw reset) starts after it; on the hub the next block starts at once. Upgrade once a mat test measures the coast.
+         */
+        function* overshootSpin() {
+            const k = runner.turnOvershootDeg;
+            if (!k || !(runner.leftPct * runner.rightPct < 0)) return;
+            note(`turn overshoot: each in-place turn goes ${fmt(k)}° further after "stop moving" (estimate setting)`);
+            const start = sim.pose.headingDeg;
+            do { yield; } while (Math.abs(sim.pose.headingDeg - start) < k);
         }
 
         function* move(b, ctx) {

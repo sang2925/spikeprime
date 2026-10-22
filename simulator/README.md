@@ -38,16 +38,16 @@ A local, offline-capable browser-based simulator for LEGO SPIKE Prime FIRST LEGO
 - Movement test panel, telemetry, path drawing (uses `physics.js`)
 
 ### `/simulator/physics.js`
-- Differential-drive physics, fixed timestep, encoders, gyro. No DOM, so it runs in Node tests.
+- Differential-drive physics, fixed timestep, encoders, gyro, table walls and optional convex obstacles. No DOM, so it runs in Node tests.
 
 ### `/simulator/llsp3.js`
 - Reads a `.llsp3` file in memory (ZIP inside ZIP, then `project.json`). Read-only.
 
 ### `/simulator/wordblocks.js`
-- Runs the Word Blocks themselves (including the team's My Blocks) against `physics.js`, one 5 ms step at a time.
+- Runs the Word Blocks themselves (including the team's My Blocks) against `physics.js`, one 5 ms step at a time. Applies the optional turn-overshoot estimate.
 
 ### `/simulator/missions.js`
-- The 15 BIOGLOW missions (scoring lines, notes, Challenge Updates) and where each model sits on the wireframe. No DOM.
+- The 15 BIOGLOW missions (scoring lines, notes, Challenge Updates), where each model sits on the wireframe, the optional model outlines (obstacles) and the per-project start poses. No DOM.
 
 ### `/simulator/tests/`
 - `physics.test.js`, `wordblocks.test.js`, `missions.test.js`. Run from `simulator/`: `node --test tests/` (Node 18 or newer).
@@ -83,7 +83,7 @@ Things the simulator found in the team's own blocks (simulated, not tested on th
 ## How to Use
 
 1. **Open the simulator:**
-   - From the project root run `python3 -m http.server 8000`, then open `http://localhost:8000/simulator/`
+   - From the project root run `python3 tools/serve.py` (it turns off browser caching, so edits show after a normal refresh), then open `http://localhost:8000/simulator/`
    - You can also double-click `index.html`. Drag-and-drop and the BIOGLOW picture worked from a `file://` page in Chrome launched with `--allow-file-access-from-files`; plain Chrome without that flag was not tested.
    - The left panel shows what you use every run, in order: **View**, **Program**, **Run Controls**, **Robot Placement**, **Sensors and Telemetry**. The setup panels below them (**Drive Settings**, **Table Dimensions**, **Mat Placement**, **Background Image**, **Grid Settings**, **Movement Test**, **Cursor Position**) start closed. Click a title to open or close it. Everything inside a closed panel still works and is still locked during a run.
 
@@ -170,14 +170,57 @@ The robot moves along the exact arc for its two wheel speeds every 5 ms step. Th
 | Gear ratio | 1 | **Example.** Direct drive assumed. |
 | Max motor speed | 1050 deg/s | **Estimate** (about 10.5 deg/s per 1 %). Not measured. |
 | Encoder signs | +1 / +1 | **Example.** Not set from the robot. |
-| Body length × width | 180 × 150 mm | **Example**, not team measurements |
+| Body length × width | 184.15 × 168.275 mm | **Team measured** (7 1/4 in front to back, 6 5/8 in side to side, no attachments). Where the wheels sit inside this box is not measured. |
+| Robot profile | Team robot | Sets the two rows below together. **Team robot** = plain-move mode "Team guess" and turn overshoot 5°. **Ideal robot** = "Drive the cm asked" and 0° (the old defaults). Editing either by hand shows Custom. Both numbers are estimates (added 2026-10-22). |
+| Turn overshoot | 5° | **Estimate setting**, read from the gyro video, not measured. 0 = ideal motors that stop at once. |
+| Table walls | On | The body box stops at the table interior walls (added 2026-10-22). |
+| Model outlines (15) | All off | **Estimates.** Wireframe outlines, ticked one by one or All on. See "Table Walls and Model Outlines". |
 
 If the simulated robot turns too fast or too slow compared to the real one, check track width first.
 
+## Turn Overshoot and the Mission 11 Obstacle (added 2026-10-21)
+
+Both were added to test why the real gyro mission stopped at Mission 11. The Mission 11 obstacle is off by default. Turn overshoot was 0° by default when this was written; since 2026-10-22 the Team robot profile sets it to 5° (see "Table Walls and Model Outlines" and Drive Settings).
+
+**Turn overshoot** (Drive Settings, degrees). When "stop moving" ends an in-place spin (wheels turning opposite ways), the robot keeps spinning this many more degrees, then stops. It only affects `.llsp3` programs. A note in the program notes says when it was used.
+
+- Simplification: the program waits for this extra spin before the next block. On the hub the next block starts at once. Without the wait, the next `straight`'s "set yaw angle to 0" would happen before the extra spin and the `straight` would steer it back out.
+
+**Mission 11 obstacle** (the first tick box in the BIOGLOW Missions list). Mission 11's wireframe outline (a diamond about 8 cm on a side, centre about (158.8, 59.2) cm) is drawn in red and blocks the robot body.
+
+- If the body would touch it, the robot stays at its last safe pose, encoders and time do not change, and the run pauses. The Sensors panel names the obstacle, the time and the wheel speeds. Resume tries the same step again, so a blocked robot stays blocked.
+- A start pose that already touches it is refused.
+- The body is the measured box centred on the wheel midpoint. A 5 ms step moves at most about 2 mm, so the robot cannot jump through the obstacle.
+- The real model's red base plate, lever and plants stick out past the outline.
+
+**Finding (simulated only, 2026-10-21).** Video of a real run (`videos/gyro_run1.MOV`, not in git) shows the robot stopping for good against the Mission 11 model during block 11 (`straight 15 cm at speed 13`). The `straight` My Block has no timeout, so it waits forever and the last four blocks never run. In the simulator, from the start pose read off the video (2099, 265 mm, facing 180°) with the obstacle on:
+
+| Turn overshoot | Result |
+|---|---|
+| 0°, 5°, 8°, 10°, 15°, 20° | Program finishes. The robot never touches the Mission 11 outline. |
+
+More overshoot turns the whole route further clockwise, which matches the heading seen in the video (about 45° clockwise in block 11 at about 5° per turn). It still leaves at least about 6 cm between the body and the outline. Moving the body forward of the wheels by up to 6 cm (tested in a script, not in the app) does not close the gap either. So these two settings alone do **not** reproduce the jam. Not yet measured: the real Mission 11 footprint including its base plate and lever, the body offset, a real `turn 90` overshoot, and where the robot really is when block 11 starts.
+
+## Table Walls and Model Outlines (added 2026-10-22)
+
+**Table walls** (Run Controls checkbox, on by default). The whole body box (184.15 × 168.275 mm, centred on the wheels) must stay inside the table interior (2362.2 × 1143 mm). If any corner would cross a wall, the robot stays at its last safe pose and the run pauses, with a message naming the wall (for example "the left table wall"). A body corner exactly on a wall still counts as inside. A spin in a corner can pause the run too, because the corners swing out. Starting over a wall is refused.
+
+**Model outlines** (BIOGLOW Missions, one tick box per model, all off by default, plus All on / All off). Fifteen outlines: missions 01 to 12 (10 and 12 have two parts) and the docks D1, D2 and D3. Same pause rule as Mission 11 above. How they were made: each corner was read off a zoomed crop of the wireframe picture with a ruler grid, good to about 5 px (about 3 mm). The picture is a diagram, not exact scale. Boxes are used for boxy models, the convex hull for diagonal ones (so empty corners count as solid), and 12-sided circles for the two round pads. Thin arms are left out (08·09). The real models' levers, plants and wires stick out further, so the real clearance is smaller than the simulator shows. Printed black lines and launch-area shapes are on the floor and are not included. The robot touches 06·07 and 11 on purpose, so ticking those pauses the run when it pushes them.
+
+**Finding (simulated only, 2026-10-22; corrected the same day after an invalid first trial).** Team robot settings, `gyro-mission6-7-11`, start (2099, 286) mm facing 180°, all 15 outlines ticked:
+
+- The run **pauses at 3.69 s in `turn 67`**: a body corner touches the **D2 dock** outline by under 1 mm (robot at about (1317, 482) mm).
+- With D2 unticked it pauses at 5.14 s in `turn 36`, on the **lower Mission 10** outline, again by under 1 mm.
+- With D2, lower Mission 10 and 06·07 unticked, the whole route finishes (17.8 s). Closest then: the top table wall 10 mm (the leafcutter push, `straight 30`), Mission 11 77 mm (the bump block stops about 8 cm short of the model in the simulator, although the real robot reaches it), the lower Mission 12 part 99 mm, D1 107 mm.
+- The outlines are good to about 5 mm and the start to about 2 cm, so both touches are inside the error: "clips D2" is possible and **unproven**. The same route also runs only 10 mm from the top wall, which suggests the simulated route is further up the table than the real one. The original `uncover` shows the same D2 near miss.
+- Check on the mat: where is the robot's corner when `turn 67` finishes, and how far is it from the D2 model?
+
+**Closest approach table** (Run Controls, under the walls checkbox): for each wall and ticked model, the smallest gap the body box reached during the run, the time, and the top-level block that was running. Nearest first, eight rows. It clears on Reset or when you tick or untick a model. A run that pauses on contact shows the contact at the top.
+
 ## Known Limitations (Milestone B)
 
-- **Boundary and obstacle collisions are not enforced yet.** The robot can drive off the table. (Milestone D.)
-- Ideal motion: no slip, no noise, no motor acceleration, no coasting after stop. Speed changes instantly. Real turns end 1-2° further than simulated ones (see above).
+- Walls and outlines use the measured body box centred on the wheels. There is no body offset or attachment footprint yet, so attachments sticking out are not checked.
+- Ideal motion: no slip, no noise, no motor acceleration. Speed changes instantly. No coasting after stop unless the turn-overshoot estimate is set. Real turns end 1-2° further than simulated ones (see above).
 - The body is drawn centred on the wheel midpoint. There is no body offset or attachment footprint yet.
 - Mat rotation turns around the mat centre and in the screen-clockwise direction; AGENTS.md asks for rotation about the mat's bottom-left corner. Not changed in this milestone.
 - No editable command list yet (Milestone C). Programs come only from `.llsp3` files, and nothing is ever saved back to `.llsp3`.
@@ -213,7 +256,7 @@ Default crop = centres of those border lines, measured from the PNG pixels: left
 
 **Shape mismatch.** That border is 1.757 wide for every 1 tall. The configured mat (2019.3 × 1136.65 mm) is 1.777. That is 1.1% off. Page 1's own lettered grid gives the same 1.757 (10 columns labelled 20 cm, so about 200 cm wide). So the wireframe is a diagram, not an exact-scale drawing. The simulator does not stretch it. It is drawn 1996.7 × 1136.65 mm, centred on the mat, so the left and right edges sit about 11 mm inside the mat outline.
 
-The wireframe does not define collision geometry. The mission markers below are labels placed on top of it.
+The wireframe does not define collision geometry. The optional model outlines were read from it by hand (see "Table Walls and Model Outlines"). The mission markers below are labels placed on top of it.
 
 ## BIOGLOW Missions
 

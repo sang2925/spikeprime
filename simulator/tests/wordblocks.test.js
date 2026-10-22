@@ -237,3 +237,60 @@ test('attachment motor C turns by the requested degrees over the estimated time'
     near(sim.timeS, 120 / (0.5 * PROFILE.maxMotorDegPerS), 0.006, 'time');
     assert.deepEqual(sim.pose, START);
 });
+
+test('turn overshoot (estimate setting): each in-place turn of the gyro mission goes that much further; 0 changes nothing', async () => {
+    const program = W.compileProgram(await loadTarget('Harrison_Lucas_Kai_leafcutter_gyro.llsp3'));
+    const turnsOf = (starts) => starts.slice(0, -1).map((s, j) => starts[j + 1].pose.headingDeg - s.pose.headingDeg);
+    const base = runProgram(program);
+    const zero = runProgram(program, { turnOvershootDeg: 0 });
+    assert.deepEqual(zero.sim.pose, base.sim.pose);
+    const k = runProgram(program, { turnOvershootDeg: 3 });
+    assert.ok(k.runner.notes.some((n) => /turn overshoot/.test(n.text)));
+    const a = turnsOf(base.starts), b = turnsOf(k.starts);
+    for (const i of [3, 5, 7, 10, 13, 15]) {      // the six turn blocks
+        const extra = Math.abs(b[i]) - Math.abs(a[i]);
+        assert.ok(extra >= 3 && extra < 3.6, `turn block ${i}: ${extra.toFixed(2)}° extra`);
+    }
+});
+
+test('gyro-mission6-7-11 (safety timers): drives the old gyro route, also when turns overshoot, and survives a pinned bump', async () => {
+    const program = W.compileProgram(await loadTarget('gyro-mission6-7-11.llsp3'));
+    const plain = runProgram(program);
+    assert.equal(plain.sim.status, 'stopped');
+    assert.ok(!plain.runner.notes.some((n) => /not simulated|no definition/.test(n.text)), 'every block is simulated');
+    // Same route as the gyro mission the team tuned on the mat, with ideal turns and with turns that go 5° too far
+    const old = W.compileProgram(await loadTarget('Harrison_Lucas_Kai_leafcutter_gyro.llsp3'));
+    for (const turnOvershootDeg of [0, 5]) {
+        const a = runProgram(old, { turnOvershootDeg }).sim.pose, b = runProgram(program, { turnOvershootDeg }).sim.pose;
+        near(Math.hypot(a.x - b.x, a.y - b.y), 0, 20, `end within 2 cm of the old gyro route (overshoot ${turnOvershootDeg}°)`);
+        near(a.headingDeg - b.headingDeg, 0, 2, `end heading matches the old gyro route (overshoot ${turnOvershootDeg}°)`);
+    }
+
+    // Pin the robot 1.2 s into the Mission 11 bump (main block 14): pose and wheels stop moving.
+    const sim = P.createSim(PROFILE, START);
+    let block = -1, t0 = 0, pinned = null;
+    const runner = W.createRunner(program, { onTopBlock: (_, i) => { block = i; t0 = sim.timeS; } });
+    P.startProgram(sim, runner);
+    for (let n = 0; sim.status === 'running' && n < 1e6; n++) {
+        P.stepSim(sim);
+        if (block === 14 && sim.timeS - t0 > 1.2) {
+            pinned = pinned || { pose: { ...sim.pose }, l: sim.encLeftDeg, r: sim.encRightDeg };
+            Object.assign(sim.pose, pinned.pose);
+            sim.encLeftDeg = pinned.l;
+            sim.encRightDeg = pinned.r;
+        }
+    }
+    assert.equal(sim.status, 'stopped', 'program still finishes');
+    assert.ok(block === 19, 'last block ran');
+});
+
+test('gyro-mission6-7-11 with the team robot settings stays inside the table walls, from its measured start', async () => {
+    const program = W.compileProgram(await loadTarget('gyro-mission6-7-11.llsp3'));
+    const start = require('../missions.js').START_POSES['gyro-mission6-7-11'];
+    const sim = P.createSim(PROFILE, { x: start.x, y: start.y, headingDeg: start.heading });
+    P.setObstacles(sim, [], { lengthMm: 184.15, widthMm: 168.275 }, { minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 });
+    const runner = W.createRunner(program, { plainMoveMode: 'app-guess', turnOvershootDeg: 5 });
+    assert.deepEqual(P.startProgram(sim, runner), []);
+    for (let n = 0; sim.status === 'running' && n < 1e7; n++) P.stepSim(sim);
+    assert.equal(sim.status, 'stopped', sim.contact || sim.fault);
+});

@@ -223,3 +223,90 @@ test('normalizeHeading wraps to (-180, 180]', () => {
     near(P.normalizeHeading(-190), 170, 1e-12, '-190');
     near(P.normalizeHeading(725), 5, 1e-12, '725');
 });
+
+test('obstacle: the robot stops at the last safe pose, the run pauses, and resume does not push through', () => {
+    const sim = P.createSim(PROFILE, START);
+    const box = { name: 'Test box', poly: [[1300, 400], [1400, 400], [1400, 600], [1300, 600]] };
+    assert.deepEqual(P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150 }), []);
+    assert.deepEqual(P.startTest(sim, 50, 50, 5), []);
+    while (sim.status === 'running') P.stepSim(sim);
+    assert.equal(sim.status, 'paused');
+    assert.match(sim.contact, /Test box/);
+    assert.equal(P.touching(sim), '');
+    near(sim.pose.x + 90, 1300, 2, 'front edge stops at the box');   // one 5 ms step at 50% is about 0.8 mm
+    const stuck = { ...sim.pose };
+    P.resume(sim);
+    P.stepSim(sim);
+    assert.equal(sim.status, 'paused');
+    assert.deepEqual(sim.pose, stuck);
+});
+
+test('obstacle: a start pose touching an obstacle is refused, and no obstacles means no collisions', () => {
+    const sim = P.createSim(PROFILE, START);
+    P.setObstacles(sim, [{ name: 'Under robot', poly: [[990, 490], [1010, 490], [1010, 510], [990, 510]] }], { lengthMm: 180, widthMm: 150 });
+    assert.match(P.startTest(sim, 50, 50, 1).join(' '), /starts touching Under robot/);
+    near(run(PROFILE, 50, 50, 1).pose.x, 1000 + 0.5 * 1000 * Math.PI * 60 / 360, 1e-6, 'no obstacles: drives freely');
+});
+
+test('table walls: the robot body stops at each of the four walls and the run pauses', () => {
+    const table = { minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 };
+    const body = { lengthMm: 184.15, widthMm: 168.275 };
+    // [start x, y, heading, wall name, which body extent ends on the wall]
+    for (const [x, y, h, wall, edge] of [[300, 500, 180, 'left', (p) => p.x - 92.075], [2000, 500, 0, 'right', (p) => p.x + 92.075],
+        [1000, 300, -90, 'bottom', (p) => p.y - 92.075], [1000, 800, 90, 'top', (p) => p.y + 92.075]]) {
+        const sim = P.createSim(PROFILE, { x, y, headingDeg: h });
+        P.setObstacles(sim, [], body, table);
+        assert.deepEqual(P.startTest(sim, 50, 50, 20), []);
+        while (sim.status === 'running') P.stepSim(sim);
+        assert.equal(sim.status, 'paused', wall);
+        assert.match(sim.contact, new RegExp(`${wall} table wall`));
+        const limit = { left: 0, right: 2362.2, bottom: 0, top: 1143 }[wall];
+        near(edge(sim.pose), limit, 1.5, `${wall}: front edge stops at the wall`);
+    }
+});
+
+test('table walls: a spin in a corner pauses when a body corner swings through the wall, and no bounds means no walls', () => {
+    const body = { lengthMm: 184.15, widthMm: 168.275 };
+    const spin = (bounds) => {
+        const sim = P.createSim(PROFILE, { x: 100, y: 100, headingDeg: 0 });     // square-on: corners 92 mm from the wall
+        P.setObstacles(sim, [], body, bounds);
+        assert.deepEqual(P.startTest(sim, 30, -30, 6), []);
+        while (sim.status === 'running') P.stepSim(sim);
+        return sim;
+    };
+    const walled = spin({ minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 });
+    assert.equal(walled.status, 'paused', 'half-diagonal is 125 mm, so a spin swings corners past a wall 100 mm away');
+    assert.match(walled.contact, /table wall/);
+    assert.equal(spin(null).status, 'stopped', 'no bounds: spins freely');
+});
+
+test('table walls: a start pose over a wall is refused', () => {
+    const sim = P.createSim(PROFILE, { x: 50, y: 500, headingDeg: 0 });
+    P.setObstacles(sim, [], { lengthMm: 184.15, widthMm: 168.275 }, { minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 });
+    assert.match(P.startTest(sim, 50, 50, 1).join(' '), /starts touching the left table wall/);
+});
+
+test('closest approach: records the smallest gap to each wall and obstacle, with the time and pose it happened', () => {
+    const sim = P.createSim(PROFILE, { x: 500, y: 500, headingDeg: 0 });
+    const box = { name: 'Box', poly: [[1000, 300], [1100, 300], [1100, 700], [1000, 700]] };   // front edge starts 410 mm away
+    P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150 }, { minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 });
+    assert.deepEqual(P.startTest(sim, 50, 50, 20), []);
+    for (let i = 0; i < 200 && sim.status === 'running'; i++) P.stepSim(sim);       // 1 s: about 260 mm at 50%, the box is 410 mm away
+    const driven = sim.pose.x - 500;
+    near(sim.clearance.Box.mm, 1000 - (sim.pose.x + 90), 1e-6, 'gap to the box = distance from the front edge');
+    assert.ok(driven > 100, 'drove away from the left wall');
+    near(sim.clearance['the left table wall'].mm, 410, 2, 'driving away: the smallest gap is the first step, about 410 mm');
+    assert.ok(sim.clearance.Box.timeS > 0.99 && sim.clearance.Box.timeS < 1.01, 'Box was closest at the end');
+    near(sim.clearance.Box.pose.x, sim.pose.x, 1e-9, 'pose is stored');
+});
+
+test('closest approach: polygonGap is zero when touching, and nothing is recorded without obstacles or walls', () => {
+    const a = [[0, 0], [10, 0], [10, 10], [0, 10]];
+    near(P.polygonGap(a, [[13, 0], [20, 0], [20, 10], [13, 10]]), 3, 1e-12, 'side by side');
+    near(P.polygonGap(a, [[13, 14], [20, 14], [20, 20], [13, 20]]), 5, 1e-12, 'corner to corner: 3 and 4');
+    near(P.polygonGap(a, [[10, 0], [20, 0], [20, 10], [10, 10]]), 0, 1e-12, 'touching');
+    const sim = P.createSim(PROFILE, START);
+    P.startTest(sim, 50, 50, 1);
+    while (sim.status === 'running') P.stepSim(sim);
+    assert.deepEqual(sim.clearance, {});
+});
