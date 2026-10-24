@@ -81,12 +81,11 @@
     const M0607 = {
         key: 'm0607', label: '06·07', name: 'Missions 06 and 07: Leafcutter Frenzy and Humongous Fungus',
         frame: { O: [2402, 828], U: [2334, 744], V: [2503, 727] },
-        // Pushing the ant slides the rack (and the ant) into the nest, and the rack turns the gear that swings the
-        // mycelium arm up and over towards the far wall (book 06 steps 48 and 91). How far the robot has pushed comes
-        // from app.js (state 'm0607', 0 to 1).
+        // Mission 06: pushing the ant slides the rack (and the ant) into the nest (book 06 step 48). How far the robot
+        // has pushed comes from app.js (state 'm0607', 0 to 1). The mycelium arm is Mission 07, a separate mission:
+        // pushing the ant does not move it (corrected 2026-10-24 by the coach), so it stays folded here.
         moves: [
             { group: 'ant', type: 'slide', dir: [0, 1], dist: 84, state: 'm0607' },
-            { group: 'arm', type: 'hinge', pxA: [2509, 740, 112], pxB: [2549, 780, 112], pxToward: [1, -1], max: 2.6, state: 'm0607' },
         ],
         parts: [
             // white base plate, tan walls, white raised floor

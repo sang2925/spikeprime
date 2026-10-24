@@ -81,7 +81,9 @@ Moving parts are `moves` in `models3d.js` (hinge or slide, driven by a 0-1 state
 - Positions: match frames to the official mat picture (OpenCV SIFT + RANSAC homography), pick robot corners, map to mm.
 - Timing: the motor sound shows block starts and ends.
 - Watch the mission parts, not just the robot: in the 2026-10-23 video the robot stopped at about 24 cm, but the
-  leafcutter ant was still 5-7 cm from the nest, so Missions 06/07 did not score.
+  leafcutter ant was still 5-7 cm from the nest, so Mission 06 did not score.
+- Missions are separate unless the rulebook says otherwise: pushing the leafcutter ant (06) does not move the
+  mycelium arm (07) or the plant root (05). Check before coupling two mission models.
 
 ## Reading PDFs on this Mac
 

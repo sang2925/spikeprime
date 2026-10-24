@@ -1256,8 +1256,8 @@ function updateMissionStatus() {
     if (!lastRunner) { missionStatusEl.textContent = ''; return; }
     const p = missionState.m0607;
     const lines = [
-        p >= 0.999 ? 'Missions 06 and 07: the ant reached the nest and the mycelium is out. ✓' : p > 0
-            ? `Missions 06 and 07: the ant moved ${(p * LEAF_TRAVEL_MM / 10).toFixed(1)} of about ${LEAF_TRAVEL_MM / 10} cm to the nest, so not scored yet.` : 'Missions 06 and 07: the ant has not been pushed.',
+        p >= 0.999 ? 'Mission 06: the ant reached the nest. ✓' : p > 0
+            ? `Mission 06: the ant moved ${(p * LEAF_TRAVEL_MM / 10).toFixed(1)} of about ${LEAF_TRAVEL_MM / 10} cm to the nest, so not scored yet.` : 'Mission 06: the ant has not been pushed.',
         missionState.pressS > 0.5 ? `Still pushing the leafcutter for ${missionState.pressS.toFixed(1)} s after the ant reached the nest: the leaves could fall out (the simulator cannot tell).` : '',
         missionState.m11 ? 'Mission 11: the robot bumped the back, so the window (root cover) fell down. ✓' : 'Mission 11: window still up.',
         '(simulated; the ant start and travel are read off the instructions, not measured)',
