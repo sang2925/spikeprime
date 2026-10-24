@@ -19,7 +19,9 @@ Mission 06 gives 10 points for each leaf fragment, but only if the fragments sta
 
 > Everyday comparison: pushing a full shopping cart into a wall. Push gently and stop, and everything stays in. Keep shoving, and the top bag tips out.
 
-In our video, the lever stopped the robot after about **24 cm** of its 30. So with 30, the wheels kept pushing on a lever that could not move any more. With 28, the robot still reaches the lever, but presses on it for less time.
+In our video, the robot stopped after about **24 cm** of its 30. But when we looked closely, **the ant was still 5 to 7 cm away from the nest**, and the mycelium (Mission 07) never came out. So in that run Missions 06 and 07 most likely scored nothing. Something pushed back before the ant got there.
+
+So watch the ant, not the robot. The ant has to slide all the way in until it touches the nest. 28 is a first guess: if the ant stops short, check that the robot hits the ant straight on before you change the number.
 
 ## The step notes
 
@@ -40,7 +42,7 @@ Steps 1, 6 and 12 already had the big PART 1, PART 2 and PART 3 notes on the lef
 | What you see | Step | Try |
 |---|---|---|
 | Leaves fall out of the nest | 7 | 28, then 26, then 24 |
-| The ant does not reach the nest | 7 | 30 |
+| The ant does not reach the nest | 7 | First check the robot hits the ant straight on, then try 30 |
 | Touches the green and black model when it turns | 3 | 40, then 38 |
 | Goes past the top of Mission 11 without bumping it | 8 | back 7 instead of back 6 |
 | Bumps Mission 11 too low, on its side | 8 | back 5 instead of back 6 |
@@ -51,7 +53,7 @@ Leave the speed at **13** in step 7. Slow keeps the leaves in.
 
 | Test | Who | Result |
 |---|---|---|
-| File opens in the SPIKE app; step 7 shows 28; all 28 notes show; no errors | Claude, 2026-10-24 | ✅ |
+| File opens in the SPIKE app; step 7 shows 28; all 28 notes show; no errors | Claude, 2026-10-24 (rebuilt with the corrected step 7 note) | ✅ |
 | Only step 7's number and the notes are different from `routefix_creep` (checked by the build tool) | Claude, 2026-10-24 | ✅ |
 | Simulator, robot slides 6 cm in fast turns: pushes the lever, bumps Mission 11, gets home | Claude, 2026-10-24 | ✅ about the same as with 30 (19, 24, 26, 22, 18, 4 good runs out of 27 for turns 0 to 5° too far) |
 | Do the leaves stay in the nest? | nobody yet | ❓ The simulator cannot tell. Only the real model can. |

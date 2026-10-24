@@ -38,8 +38,8 @@ def notes(n):
         7: (f'STEP 7: PUSH LEVER ({p})',
             'Mission 06 only scores while the leaf fragments stay inside the nest. Push too far or too fast and they fall out: 0 points.\n'
             f'Leaves fall out, or the ant goes past the nest? Make {p} smaller (try {int(p) - 2}).\n'
-            f"Ant doesn't reach the nest? Make {p} bigger (try {int(p) + 2}).\n"
-            'In our video the lever stopped the robot after about 24 cm, so numbers above 24 keep pushing against the lever.\n'
+            f"Ant doesn't reach the nest? First check the robot hits the ant straight on, then make {p} bigger (try {int(p) + 2}).\n"
+            'In our video the robot stopped after about 24 cm, but the ant was still 5 to 7 cm short of the nest and the mycelium did not come out. Watch the ant: it has to touch the nest.\n'
             'Leave speed 13 alone: slow keeps the leaves in.'),
         8: (f'STEP 8: back off lever ({n[8]})',
             'Sets where the robot meets Mission 11 in step 10.\n'
