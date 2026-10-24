@@ -123,11 +123,12 @@
             { pxBox: [[2500, 748], [2512, 772]], z: [PLATE + BRICK, 110], color: C.grey },
             { pxBox: [[2546, 748], [2558, 772]], z: [PLATE + BRICK, 110], color: C.grey },
             { pxBox: [[2500, 748], [2558, 772]], z: [104, 114], color: C.white },
-            // the white mycelium arm, folded (starting position, field setup guide p. 8): it hangs from the top of the
-            // tower down to the front, the side the ant is on, with the red handle lying across its end near the mat
-            { pxBeam: [[2529, 760, 112], [2470, 822, 18]], w: 7, color: C.white, group: 'arm' },
-            { pxBeam: [[2529, 752, 108], [2486, 800, 60]], w: 7, color: C.white, group: 'arm' },
-            { pxBeam: [[2448, 803, 16], [2492, 841, 16]], w: 9, color: C.red, group: 'arm' },
+            // the white mycelium arm (Mission 07), folded (starting position, Field Setup Guide p. 8, rechecked 2026-10-24):
+            // it hangs straight down in front of its own tower (south, away from the wall), not across towards the nest,
+            // with the red handle lying across the front of the tower base
+            { pxBeam: [[2522, 772, 112], [2522, 832, 18]], w: 7, color: C.white, group: 'arm' },
+            { pxBeam: [[2538, 772, 108], [2538, 812, 60]], w: 7, color: C.white, group: 'arm' },
+            { pxBeam: [[2500, 834, 16], [2556, 834, 16]], w: 9, color: C.red, group: 'arm' },
         ],
     };
 
@@ -162,14 +163,16 @@
             { pxPoly: [[1668, 1990], [1758, 1936], [1776, 1962], [1686, 2016]], z: [30, 34], color: C.green },
             { pxBox: [[1700, 1962], [1720, 1982]], z: [34, 46], color: C.red },
         ] };
-    // Mission 02 Exploding Seeds (book 02): grey frame base, green stalk, green hose arches, brown seeds with yellow rings
-    const M02 = { key: 'm02', label: '02', name: 'Mission 02: Exploding Seeds', frame: onRect(1059, 1476, 1160, 1577), parts: [
-        { box: [[14, 54], [14, 54], [0, 8]], color: C.grey }, { box: [[22, 46], [22, 46], [8, 12]], color: C.darkGrey },
-        { box: [[30, 38], [30, 38], [12, 130]], color: C.brightGreen },
-        { beam: [[34, 34, 118], [34, 48, 150]], w: 4, color: C.yellow },
-        ...ring(34, 34, 34, 100, 4, C.brightGreen, 16, 0, Math.PI),
-        { sphere: [2, 34], z: 100, r: 7, color: C.brown }, { sphere: [66, 34], z: 100, r: 7, color: C.brown },
-        { sphere: [18, 20], z: 20, r: 7, color: C.brown }, { cyl: [18, 12], r: 6, z: [6, 9], color: C.yellow },
+    // Mission 02 Exploding Seeds (book 02; Field Setup Guide p. 4): the grey frame base sits on the diagonal (the
+    // diamond on the wireframe), the green stalk stands in its middle, the hose arches over it, seeds on the stalk.
+    // Checked 2026-10-24. Frame: u from the left corner to the bottom corner, v from the left corner to the top corner.
+    const M02 = { key: 'm02', label: '02', name: 'Mission 02: Exploding Seeds', frame: { O: [1059, 1527], U: [1110, 1577], V: [1110, 1476] }, parts: [
+        { box: [[2, 46], [2, 46], [0, 8]], color: C.grey }, { box: [[12, 36], [12, 36], [8, 12]], color: C.darkGrey },
+        { box: [[20, 28], [20, 28], [12, 130]], color: C.brightGreen },
+        { beam: [[24, 24, 118], [24, 36, 150]], w: 4, color: C.yellow },
+        ...ring(24, 24, 34, 100, 4, C.brightGreen, 16, 0, Math.PI),
+        { sphere: [12, 24], z: 92, r: 7, color: C.brown }, { sphere: [36, 24], z: 92, r: 7, color: C.brown },
+        { sphere: [24, 24], z: 70, r: 7, color: C.brown }, { cyl: [24, 16], r: 6, z: [66, 69], color: C.yellow },
     ] };
     // Mission 03 Flip the Rock (book 03): lime frame, grey and green rock, two red flags
     const M03 = { key: 'm03', label: '03', name: 'Mission 03: Flip the Rock', frame: onRect(195, 1303, 375, 1399), parts: [
@@ -180,16 +183,23 @@
         { box: [[6, 14], [26, 34], [8, 84]], color: C.red }, { box: [[107, 115], [26, 34], [8, 84]], color: C.red },
         { cyl: [60, 33], r: 5, z: [58, 70], color: C.azure },
     ] };
-    // Mission 04 Lucky Leaves (book 04): green leaf nest with three rope loops
-    const M04 = { key: 'm04', label: '04', name: 'Mission 04: Lucky Leaves', frame: onRect(246, 715, 440, 910), parts: [
-        { box: [[50, 80], [40, 90], [0, 14]], color: C.darkGrey },
-        { box: [[46, 84], [30, 100], [14, 24]], color: C.green, studs: true },
-        { beam: [[46, 64, 18], [6, 40, 6]], w: 16, color: C.green, flatten: true },
-        { beam: [[84, 64, 18], [124, 40, 6]], w: 16, color: C.green, flatten: true },
-        { beam: [[64, 100, 18], [64, 126, 6]], w: 18, color: C.green, flatten: true },
-        ...[36, 64, 92].flatMap((u) => ring(u, 66, 14, 54, 3, C.tan, 12)),
-        ...[36, 64, 92].map((u) => ({ beam: [[u, 66, 24], [u, 66, 40]], w: 3, color: C.tan })),
-    ] };
+    // Mission 04 Lucky Leaves (book 04; Field Setup Guide p. 6): three flat green wings bent around the top-left corner of
+    // the thick square (the leaf habitat area, flat on the mat), a tan rope loop standing on each wing. The katydid and
+    // leaves are placed by the referee, so they are not drawn. Checked against the wireframe 2026-10-24.
+    const M04 = { key: 'm04', label: '04', name: 'Mission 04: Lucky Leaves', frame: onRect(246, 715, 440, 910), parts: [],
+        extra: [
+            { pxBox: [[248, 840], [316, 908]], z: [0, 8], color: C.darkGrey }, { pxBox: [[252, 848], [318, 900]], z: [8, 14], color: C.green },
+            { pxBox: [[370, 717], [438, 786]], z: [0, 8], color: C.darkGrey }, { pxBox: [[378, 717], [430, 788]], z: [8, 14], color: C.green },
+            { pxPoly: [[278, 780], [310, 746], [368, 790], [318, 838]], z: [0, 8], color: C.darkGrey },
+            { pxPoly: [[284, 780], [312, 752], [362, 792], [320, 832]], z: [8, 14], color: C.green },
+            { pxBeam: [[268, 874, 12], [250, 874, 4]], w: 30, color: C.green }, { pxBeam: [[404, 730, 12], [404, 718, 4]], w: 30, color: C.green },
+            { pxBeam: [[300, 772, 12], [284, 756, 4]], w: 30, color: C.green },
+            ...[[290, 874], [404, 752], [322, 792]].flatMap(([x, y]) => Array.from({ length: 12 }, (_, i) => {
+                const t0 = Math.PI * 2 * i / 12, t1 = Math.PI * 2 * (i + 1) / 12, r = 14 / MM_PER_PX;
+                return { pxBeam: [[x + r * Math.cos(t0), y, 54 + 14 * Math.sin(t0)], [x + r * Math.cos(t1), y, 54 + 14 * Math.sin(t1)]], w: 3, color: C.tan };
+            })),
+            ...[[290, 874], [404, 752], [322, 792]].map(([x, y]) => ({ pxBeam: [[x, y, 14], [x, y, 40]], w: 3, color: C.tan })),
+        ] };
     // Mission 05 Reaching Roots (book 05). Orientation from the Field Setup Guide photo (p. 7) and the wireframe
     // (checked 2026-10-24): the grey frame stands on the left side, its face square to the wall; the brown root stands on
     // the right with its curved foot reaching out from the wall (the thin strip on the wireframe), leans back towards
@@ -227,20 +237,25 @@
         { box: [[4, 10], [18, 26], [6, 86]], color: C.brown }, { box: [[4, 34], [18, 26], [80, 86]], color: C.brown },
         { sphere: [22, 22], z: 44, r: 5, color: C.black },
     ] };
-    const M10B = { key: 'm10a', label: '10', name: 'Mission 10: snail habitat', frame: onRect(1250, 736, 1307, 805), parts: [
-        { box: [[6, 30], [10, 30], [0, 16]], color: C.darkGrey },
-        { beam: [[18, 20, 14], [44, 20, 50]], w: 10, color: C.brightGreen },
-        { beam: [[24, 20, 10], [50, 20, 46]], w: 4, color: C.brown },
-        { sphere: [46, 20], z: 58, r: 10, color: C.yellow }, { sphere: [40, 20], z: 60, r: 5, color: C.orange },
+    // The snail habitat: the wireframe base is a tilted rectangle whose long side runs up towards the top wall; the ramp
+    // climbs that way with the yellow snail at the top (Field Setup Guide p. 10). Checked 2026-10-24.
+    // Frame: O = bottom corner (1285, 801), u to (1255, 786), v up the ramp to (1311, 757).
+    const M10B = { key: 'm10a', label: '10', name: 'Mission 10: snail habitat', frame: { O: [1285, 801], U: [1255, 786], V: [1311, 757] }, parts: [
+        { box: [[0, 22], [0, 34], [0, 14]], color: C.darkGrey },
+        { beam: [[11, 4, 12], [11, 40, 66]], w: 10, color: C.brightGreen },
+        { beam: [[4, 2, 8], [4, 38, 62]], w: 5, color: C.brown },
+        { sphere: [11, 44], z: 76, r: 11, color: C.yellow }, { sphere: [11, 36], z: 74, r: 6, color: C.orange },
     ] };
-    // Mission 12 Forest Elder (book 10): leaning tan tree with a red support tie, and the separate post
+    // Mission 12 Forest Elder (book 10; Field Setup Guide p. 12): the leaning tan tree on its round green base, the red
+    // support tie on the wall side, and the long brown cane lying flat on the mat, pointing away from the home area
+    // (north-west). Checked 2026-10-24.
     const M12A = { key: 'm12a', label: '12', name: 'Mission 12: Forest Elder', frame: onRect(2995, 1156, 3091, 1252), parts: [
         { cyl: [32, 32], r: 30, z: [0, 8], color: C.green },
         { beam: [[32, 32, 8], [40, 36, 80]], w: 12, color: C.tan }, { beam: [[40, 36, 80], [26, 30, 140]], w: 10, color: C.tan },
         { beam: [[40, 36, 80], [56, 38, 130]], w: 8, color: C.tan },
         { sphere: [26, 30], z: 146, r: 14, color: C.green }, { sphere: [58, 38], z: 136, r: 12, color: C.green },
-        ...ring(32, 32, 22, 40, 4, C.red, 12, -Math.PI / 2, Math.PI * 1.2),
-        { beam: [[20, 20, 6], [6, 4, 30]], w: 4, color: C.brown },
+        ...ring(50, 32, 20, 42, 4, C.red, 12, -Math.PI / 2, Math.PI * 1.2),
+        { beam: [[26, 40, 3], [-50, 110, 3]], w: 5, color: C.brown }, { beam: [[-50, 110, 3], [-58, 118, 8]], w: 6, color: C.brown },
     ] };
     const M12B = { key: 'm12b', label: '12', name: 'Mission 12: post', frame: onRect(3025, 1472, 3061, 1562), parts: [
         { box: [[6, 18], [4, 56], [0, 8]], color: C.darkGrey },
@@ -248,27 +263,25 @@
     ] };
     // The three dock models (books 11, 12, 13; Missions 13, 14 and 15) each with its grey dock frame. D2 is the
     // green and black one in the team video; which of the other two stands on D1 and which on D3 is a guess.
-    const dockFrame = (U, V) => [...frameUp(0, U, V - 8, V, 0, 40, C.darkGrey), { box: [[0, U], [V - 60, V], [0, 6]], color: C.darkGrey }];
-    const M13 = { key: 'd2', label: '13', name: 'Mission 13: Keystone Species (D2 dock)', frame: onRect(1584, 1295, 1716, 1499), parts: [
+    const M13 = { key: 'd2', label: '13', stretchV: 1.75, name: 'Mission 13: Keystone Species (D2 dock)', frame: onRect(1584, 1295, 1716, 1499), parts: [
         { box: [[6, 83], [6, 70], [0, 10]], color: C.black }, ...frameUp(6, 83, 6, 14, 10, 60, C.darkGrey), ...frameUp(6, 83, 62, 70, 10, 60, C.darkGrey),
         { box: [[10, 79], [14, 62], [40, 48]], color: C.brown },
         { box: [[10, 79], [14, 20], [10, 30]], color: C.brightGreen }, { box: [[10, 79], [56, 62], [10, 30]], color: C.brightGreen },
         { cyl: [24, 38], r: 10, r2: 4, z: [48, 70], color: C.green }, { cyl: [60, 40], r: 10, r2: 4, z: [48, 70], color: C.green },
-        { box: [[72, 78], [40, 46], [60, 70]], color: C.yellow }, ...dockFrame(89, 137),
+        { box: [[72, 78], [40, 46], [60, 70]], color: C.yellow },
     ] };
-    const M14 = { key: 'd3', label: '14', name: 'Mission 14: Seeds of Renewal (dock, guess)', frame: onRect(1999, 2089, 2130, 2292), parts: [
+    const M14 = { key: 'd3', label: '14', stretchV: 1.75, name: 'Mission 14: Seeds of Renewal (dock, guess)', frame: onRect(1999, 2089, 2130, 2292), parts: [
         { box: [[6, 82], [6, 70], [0, 10]], color: C.brightGreen }, ...frameUp(6, 82, 6, 14, 10, 54, C.darkGrey), ...frameUp(6, 82, 62, 70, 10, 54, C.darkGrey),
         ...[14, 24, 34, 44, 54, 64, 74].map((u) => ({ box: [[u, u + 5], [14, 62], [30, 50]], color: C.brown })),
         { box: [[10, 78], [14, 62], [26, 30]], color: C.green }, { box: [[70, 78], [8, 14], [54, 62]], color: C.yellow },
-        ...dockFrame(88, 137),
     ] };
-    const M15 = { key: 'd1', label: '15', name: 'Mission 15: Biocentric Architecture (dock, guess)', frame: { O: [2858, 820], U: [2951, 904], V: [3001, 684] }, parts: [
+    const M15 = { key: 'd1', label: '15', stretchV: 1.75, name: 'Mission 15: Biocentric Architecture (dock, guess)', frame: { O: [2858, 820], U: [2951, 904], V: [3001, 684] }, parts: [
         { box: [[4, 80], [6, 76], [0, 50]], color: C.tan }, { box: [[4, 80], [6, 76], [50, 56]], color: C.brightGreen, studs: true },
         { box: [[4, 40], [6, 76], [56, 62]], color: C.black, studs: true },
         { box: [[44, 76], [10, 40], [56, 60]], color: C.red }, { box: [[48, 72], [14, 36], [56, 58]], color: C.clear, opacity: 0.5 },
         ...frameUp(4, 80, 0, 8, 0, 54, C.brightGreen),
         { box: [[20, 34], [-1, 1], [14, 34]], color: C.clear, opacity: 0.6 }, { box: [[50, 64], [-1, 1], [14, 34]], color: C.clear, opacity: 0.6 },
-        { box: [[78, 92], [30, 40], [34, 40]], color: C.red }, ...dockFrame(84, 133),
+        { box: [[70, 82], [30, 40], [56, 62]], color: C.red },
     ] };
 
     const MODELS = [M0607, M11, M01, M02, M03, M04, M05, M0809, M10A, M10B, M12A, M12B, M13, M14, M15];
@@ -279,7 +292,8 @@
         const f = model.frame;
         const unit = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
         const eu = unit(f.O, f.U), ev = unit(f.O, f.V);
-        const px = (u, v) => [f.O[0] + (u * eu[0] + v * ev[0]) / MM_PER_PX, f.O[1] + (u * eu[1] + v * ev[1]) / MM_PER_PX];
+        const sv = model.stretchV || 1;   // dock models: drawn short, stretched to fill the dock outline
+        const px = (u, v) => [f.O[0] + (u * eu[0] + v * sv * ev[0]) / MM_PER_PX, f.O[1] + (u * eu[1] + v * sv * ev[1]) / MM_PER_PX];
         const studsOn = (u0, u1, v0, v1, z, color) => {
             const pts = [];
             for (let u = u0 + STUD / 2; u < u1 - 1; u += STUD) for (let v = v0 + STUD / 2; v < v1 - 1; v += STUD) pts.push(px(u, v));

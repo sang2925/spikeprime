@@ -75,6 +75,11 @@ check the Field Setup Guide (`simulator/assets/bioglow-field-setup-guide.pdf`): 
 pp. 3-16 show each model on the mat. Wireframe pixel to mat: subtract the crop (166, 636), times 1996.7/2967 mm.
 Moving parts are `moves` in `models3d.js` (hinge or slide, driven by a 0-1 state from `app.js`).
 
+**Before saying a model is done, check it, all of them, not just the one asked about:** open its Field Setup Guide
+photo and the wireframe crop side by side with a 3D close-up, and compare position, which way it faces, the main
+parts, and what moves. Only link two missions' parts if the rulebook says so. Report each model as "checked against
+<page>" or "guessed", never as done when it is only rendered.
+
 ## Comparing with a robot video
 
 - Frames: `ffmpeg -ss <t> -i videos/<file>.MOV -frames:v 1 out.jpg`; crop the area of interest and look before claiming.
