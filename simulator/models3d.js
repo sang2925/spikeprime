@@ -25,6 +25,10 @@
     const M11 = {
         key: 'm11', label: '11', name: 'Mission 11: Window to the Past',
         frame: { O: [2251, 1527], U: [2336, 1443], V: [2172, 1447] },
+        // the cover swings on this line (u from 0 to 80 at the front edge, just above the mat) and falls outward, to -v
+        hinge: { group: 'cover', a: [0, 0, PLATE], b: [80, 0, PLATE], outward: [40, -40] },
+        // the cover lying flat on the mat (for the 2D view): u 8 to 72, v 0 to -64
+        flat: [[8, 0], [72, 0], [72, -64], [8, -64]],
         parts: [
             // base plate and the hinge strip at the front
             { box: [[0, 80], [6, 76], [0, PLATE]], color: C.brown, studs: true },
@@ -61,11 +65,11 @@
             { beam: [[2, 38, 60], [-14, 30, 72]], w: 5, color: C.red },
             { sphere: [-18, 28], z: 46, r: 8, color: C.tan },
             // ROOT COVER, standing up in its starting position: brown plate with a black and a dark orange tile,
-            // red edge along the top that sticks out past the right side
-            { box: [[8, 72], [-1, 2.2], [PLATE, PLATE + 64]], color: C.brown },
-            { box: [[-6, 86], [-3, 3], [PLATE + 60, PLATE + 66]], color: C.red },
-            { box: [[30, 46], [-2, -1], [30, 50]], color: C.black },
-            { box: [[50, 56], [-2, -1], [20, 44]], color: C.darkOrange },
+            // red edge along the top that sticks out past the right side (field setup guide p. 11 photo)
+            { box: [[8, 72], [-1, 2.2], [PLATE, PLATE + 64]], color: C.brown, group: 'cover' },
+            { box: [[6, 100], [-3, 3], [PLATE + 60, PLATE + 66]], color: C.red, group: 'cover' },
+            { box: [[50, 68], [-2, -1], [48, 62]], color: C.black, group: 'cover' },
+            { box: [[60, 66], [-2, -1], [26, 48]], color: C.darkOrange, group: 'cover' },
         ],
     };
 
@@ -95,8 +99,8 @@
             { box: [[4, 70], [22, 74], [PLATE + 5 * BRICK, PLATE + 5 * BRICK + 4]], color: C.white },
             { box: [[10, 64], [30, 66], [PLATE + 5 * BRICK + 4, PLATE + 6 * BRICK]], color: C.tan },
             ...[[6, 12], [62, 12], [6, 80], [62, 80]].map(([u, v]) => ({ box: [[u, u + 6], [v, v + 6], [PLATE + 5 * BRICK, PLATE + 5 * BRICK + 6]], color: C.green })),
-            // the leaf fragments standing in the nest (white, yellow, orange, green)
-            ...[[C.white, 24], [C.yellow, 34], [C.orange, 44], [C.green, 54]].map(([color, v]) => ({ leaf: [36, v], z: [62, 112], color })),
+            // the leaf fragments standing in the nest: green nearest the ant, then orange, yellow, white (field setup guide p. 8)
+            ...[[C.green, 24], [C.orange, 34], [C.yellow, 44], [C.white, 54]].map(([color, v]) => ({ leaf: [36, v], z: [62, 112], color })),
             // the white toothed rack, pulled out to the starting line, and the ant on its red sled
             { box: [[20, 30], [-92, 40], [PLATE, PLATE + 6]], color: C.white },
             { box: [[22, 28], [-92, 40], [PLATE + 6, PLATE + 9]], color: C.white },
@@ -113,14 +117,137 @@
             { pxBox: [[2500, 748], [2512, 772]], z: [PLATE + BRICK, 110], color: C.grey },
             { pxBox: [[2546, 748], [2558, 772]], z: [PLATE + BRICK, 110], color: C.grey },
             { pxBox: [[2500, 748], [2558, 772]], z: [104, 114], color: C.white },
-            // the white mycelium arm, folded: one beam leaning out, the red handle at its end
-            { pxBeam: [[2529, 760, 112], [2610, 700, 60]], w: 7, color: C.white },
-            { pxBeam: [[2529, 760, 112], [2475, 700, 135]], w: 7, color: C.white },
-            { pxBeam: [[2600, 690, 60], [2620, 710, 60]], w: 9, color: C.red },
+            // the white mycelium arm, folded (starting position, field setup guide p. 8): it hangs from the top of the
+            // tower down to the front, the side the ant is on, with the red handle lying across its end near the mat
+            { pxBeam: [[2529, 760, 112], [2470, 822, 18]], w: 7, color: C.white },
+            { pxBeam: [[2529, 752, 108], [2486, 800, 60]], w: 7, color: C.white },
+            { pxBeam: [[2448, 803, 16], [2492, 841, 16]], w: 9, color: C.red },
         ],
     };
 
-    const MODELS = [M0607, M11];
+    // ---- The other models: simpler LEGO-style shapes from each book's finished picture (and the rulebook photos),
+    // sized to their wireframe outlines. Frame: u to the right on the picture, v up the picture (towards the far wall).
+    const onRect = (x0, y0, x1, y1) => ({ O: [x0, y1], U: [x1, y1], V: [x0, y0] });
+    const ring = (cu, cv, r, z, w, color, n = 14, from = 0, to = 2 * Math.PI) => Array.from({ length: n }, (_, i) => {   // a hose or rope loop in the u-z plane
+        const t0 = from + (to - from) * i / n, t1 = from + (to - from) * (i + 1) / n;
+        return { beam: [[cu + r * Math.cos(t0), cv, z + r * Math.sin(t0)], [cu + r * Math.cos(t1), cv, z + r * Math.sin(t1)]], w, color };
+    });
+    const frameUp = (u0, u1, v0, v1, z0, z1, color) => [   // a technic frame standing up: four bars
+        { box: [[u0, u1], [v0, v1], [z0, z0 + 8]], color }, { box: [[u0, u1], [v0, v1], [z1 - 8, z1]], color },
+        { box: [[u0, u0 + 8], [v0, v1], [z0, z1]], color }, { box: [[u1 - 8, u1], [v0, v1], [z0, z1]], color }];
+
+    // Mission 01 Drone Survey (book 01): round pad, black A-frame, the drone up top
+    const M01 = { key: 'm01', label: '01', name: 'Mission 01: Drone Survey', frame: onRect(1827, 2195, 1923, 2291), parts: [
+        { cyl: [32, 32], r: 30, z: [0, PLATE * 2], color: C.darkGrey },
+        { cyl: [32, 32], r: 22, z: [PLATE * 2, PLATE * 3], color: C.grey },
+        { beam: [[10, 32, 6], [30, 32, 150]], w: 4, color: C.black },
+        { beam: [[54, 32, 6], [34, 32, 150]], w: 4, color: C.black },
+        { box: [[22, 42], [24, 40], [146, 154]], color: C.black },
+        { box: [[26, 38], [26, 38], [128, 146]], color: C.azure, opacity: 0.8 },
+        { box: [[40, 62], [46, 60], [PLATE * 2, 20]], color: C.red }, { box: [[46, 60], [48, 58], [20, 28]], color: C.green },
+    ] };
+    // Mission 02 Exploding Seeds (book 02): grey frame base, green stalk, green hose arches, brown seeds with yellow rings
+    const M02 = { key: 'm02', label: '02', name: 'Mission 02: Exploding Seeds', frame: onRect(1059, 1476, 1160, 1577), parts: [
+        { box: [[14, 54], [14, 54], [0, 8]], color: C.grey }, { box: [[22, 46], [22, 46], [8, 12]], color: C.darkGrey },
+        { box: [[30, 38], [30, 38], [12, 130]], color: C.brightGreen },
+        { beam: [[34, 34, 118], [34, 48, 150]], w: 4, color: C.yellow },
+        ...ring(34, 34, 34, 100, 4, C.brightGreen, 16, 0, Math.PI),
+        { sphere: [2, 34], z: 100, r: 7, color: C.brown }, { sphere: [66, 34], z: 100, r: 7, color: C.brown },
+        { sphere: [18, 20], z: 20, r: 7, color: C.brown }, { cyl: [18, 12], r: 6, z: [6, 9], color: C.yellow },
+    ] };
+    // Mission 03 Flip the Rock (book 03): lime frame, grey and green rock, two red flags
+    const M03 = { key: 'm03', label: '03', name: 'Mission 03: Flip the Rock', frame: onRect(195, 1303, 375, 1399), parts: [
+        { box: [[4, 117], [4, 61], [0, 8]], color: C.brightGreen },
+        { box: [[14, 107], [10, 55], [8, 38]], color: C.darkGrey },
+        { box: [[20, 100], [16, 50], [38, 48]], color: C.green, studs: true },
+        { box: [[40, 80], [22, 44], [48, 58]], color: C.grey },
+        { box: [[6, 14], [26, 34], [8, 84]], color: C.red }, { box: [[107, 115], [26, 34], [8, 84]], color: C.red },
+        { cyl: [60, 33], r: 5, z: [58, 70], color: C.azure },
+    ] };
+    // Mission 04 Lucky Leaves (book 04): green leaf nest with three rope loops
+    const M04 = { key: 'm04', label: '04', name: 'Mission 04: Lucky Leaves', frame: onRect(246, 715, 440, 910), parts: [
+        { box: [[50, 80], [40, 90], [0, 14]], color: C.darkGrey },
+        { box: [[46, 84], [30, 100], [14, 24]], color: C.green, studs: true },
+        { beam: [[46, 64, 18], [6, 40, 6]], w: 16, color: C.green, flatten: true },
+        { beam: [[84, 64, 18], [124, 40, 6]], w: 16, color: C.green, flatten: true },
+        { beam: [[64, 100, 18], [64, 126, 6]], w: 18, color: C.green, flatten: true },
+        ...[36, 64, 92].flatMap((u) => ring(u, 66, 14, 54, 3, C.tan, 12)),
+        ...[36, 64, 92].map((u) => ({ beam: [[u, 66, 24], [u, 66, 40]], w: 3, color: C.tan })),
+    ] };
+    // Mission 05 Reaching Roots (book 05): grey frames, brown root arm with red bars
+    const M05 = { key: 'm05', label: '05', name: 'Mission 05: Reaching Roots', frame: onRect(734, 643, 794, 774), parts: [
+        ...frameUp(4, 36, 10, 18, 0, 56, C.grey), ...frameUp(4, 36, 50, 58, 0, 56, C.grey),
+        { box: [[4, 36], [10, 58], [0, 6]], color: C.darkGrey },
+        { box: [[14, 26], [20, 48], [6, 96]], color: C.brown },
+        { beam: [[20, 34, 96], [20, 84, 120]], w: 10, color: C.brown },
+        { beam: [[20, 84, 120], [20, 92, 140]], w: 6, color: C.brown },
+        { beam: [[8, 40, 80], [32, 40, 80]], w: 4, color: C.red }, { beam: [[8, 70, 110], [32, 70, 110]], w: 4, color: C.red },
+        { box: [[14, 26], [48, 60], [84, 92]], color: C.green },
+    ] };
+    // Missions 08 Tangled and 09 Research Platform (book 07): the big tree, its canopy and the research platform
+    const M0809 = { key: 'm0809', label: '08·09', name: 'Missions 08 and 09: Tangled and Research Platform', frame: onRect(947, 680, 1098, 800), parts: [
+        { box: [[20, 82], [10, 70], [0, 8]], color: C.brown },
+        { box: [[36, 66], [26, 56], [8, 230]], color: C.brown },
+        { beam: [[66, 40, 200], [92, 40, 236]], w: 8, color: C.brown }, { beam: [[36, 40, 190], [6, 40, 228]], w: 8, color: C.brown },
+        { cyl: [51, 41], r: 46, r2: 30, z: [226, 246], color: C.brightGreen }, { cyl: [51, 41], r: 30, r2: 12, z: [246, 262], color: C.green },
+        { box: [[60, 100], [14, 66], [110, 118]], color: C.tan, studs: true },
+        { box: [[60, 100], [14, 18], [118, 128]], color: C.tan }, { box: [[96, 100], [14, 66], [118, 128]], color: C.tan },
+        { box: [[66, 72], [30, 36], [118, 138]], color: C.green }, { box: [[80, 86], [44, 50], [118, 138]], color: C.darkOrange },
+        { beam: [[66, 40, 20], [100, 6, 4]], w: 5, color: C.green }, { beam: [[100, 6, 4], [120, -10, 4]], w: 5, color: C.tan },
+        { box: [[30, 36], [56, 62], [100, 110]], color: C.red },
+    ] };
+    // Mission 10 Fragile Microhabitats (book 08). Which outline is the spider habitat and which the snail habitat is a guess.
+    const M10A = { key: 'm10a', label: '10', name: 'Mission 10: spider habitat (guess)', frame: onRect(1250, 736, 1307, 805), parts: [
+        { box: [[4, 34], [16, 28], [0, 6]], color: C.brightGreen },
+        ...frameUp(6, 34, 18, 26, 6, 78, C.white),
+        { box: [[4, 10], [18, 26], [6, 86]], color: C.brown }, { box: [[4, 34], [18, 26], [80, 86]], color: C.brown },
+        { sphere: [22, 22], z: 44, r: 5, color: C.black },
+    ] };
+    const M10B = { key: 'm10b', label: '10', name: 'Mission 10: snail habitat (guess)', frame: onRect(1672, 1225, 1748, 1285), parts: [
+        { box: [[6, 30], [10, 30], [0, 16]], color: C.darkGrey },
+        { beam: [[18, 20, 14], [44, 20, 50]], w: 10, color: C.brightGreen },
+        { beam: [[24, 20, 10], [50, 20, 46]], w: 4, color: C.brown },
+        { sphere: [46, 20], z: 58, r: 10, color: C.yellow }, { sphere: [40, 20], z: 60, r: 5, color: C.orange },
+    ] };
+    // Mission 12 Forest Elder (book 10): leaning tan tree with a red support tie, and the separate post
+    const M12A = { key: 'm12a', label: '12', name: 'Mission 12: Forest Elder', frame: onRect(2995, 1156, 3091, 1252), parts: [
+        { cyl: [32, 32], r: 30, z: [0, 8], color: C.green },
+        { beam: [[32, 32, 8], [40, 36, 80]], w: 12, color: C.tan }, { beam: [[40, 36, 80], [26, 30, 140]], w: 10, color: C.tan },
+        { beam: [[40, 36, 80], [56, 38, 130]], w: 8, color: C.tan },
+        { sphere: [26, 30], z: 146, r: 14, color: C.green }, { sphere: [58, 38], z: 136, r: 12, color: C.green },
+        ...ring(32, 32, 22, 40, 4, C.red, 12, -Math.PI / 2, Math.PI * 1.2),
+        { beam: [[20, 20, 6], [6, 4, 30]], w: 4, color: C.brown },
+    ] };
+    const M12B = { key: 'm12b', label: '12', name: 'Mission 12: post', frame: onRect(3025, 1472, 3061, 1562), parts: [
+        { box: [[6, 18], [4, 56], [0, 8]], color: C.darkGrey },
+        { beam: [[12, 50, 8], [12, 56, 32]], w: 8, color: C.grey }, { box: [[4, 20], [50, 58], [30, 40]], color: C.red },
+    ] };
+    // The three dock models (books 11, 12, 13; Missions 13, 14 and 15) each with its grey dock frame. D2 is the
+    // green and black one in the team video; which of the other two stands on D1 and which on D3 is a guess.
+    const dockFrame = (U, V) => [...frameUp(0, U, V - 8, V, 0, 40, C.darkGrey), { box: [[0, U], [V - 60, V], [0, 6]], color: C.darkGrey }];
+    const M13 = { key: 'd2', label: '13', name: 'Mission 13: Keystone Species (D2 dock)', frame: onRect(1584, 1295, 1716, 1499), parts: [
+        { box: [[6, 83], [6, 70], [0, 10]], color: C.black }, ...frameUp(6, 83, 6, 14, 10, 60, C.darkGrey), ...frameUp(6, 83, 62, 70, 10, 60, C.darkGrey),
+        { box: [[10, 79], [14, 62], [40, 48]], color: C.brown },
+        { box: [[10, 79], [14, 20], [10, 30]], color: C.brightGreen }, { box: [[10, 79], [56, 62], [10, 30]], color: C.brightGreen },
+        { cyl: [24, 38], r: 10, r2: 4, z: [48, 70], color: C.green }, { cyl: [60, 40], r: 10, r2: 4, z: [48, 70], color: C.green },
+        { box: [[72, 78], [40, 46], [60, 70]], color: C.yellow }, ...dockFrame(89, 137),
+    ] };
+    const M14 = { key: 'd3', label: '14', name: 'Mission 14: Seeds of Renewal (dock, guess)', frame: onRect(1999, 2089, 2130, 2292), parts: [
+        { box: [[6, 82], [6, 70], [0, 10]], color: C.brightGreen }, ...frameUp(6, 82, 6, 14, 10, 54, C.darkGrey), ...frameUp(6, 82, 62, 70, 10, 54, C.darkGrey),
+        ...[14, 24, 34, 44, 54, 64, 74].map((u) => ({ box: [[u, u + 5], [14, 62], [30, 50]], color: C.brown })),
+        { box: [[10, 78], [14, 62], [26, 30]], color: C.green }, { box: [[70, 78], [8, 14], [54, 62]], color: C.yellow },
+        ...dockFrame(88, 137),
+    ] };
+    const M15 = { key: 'd1', label: '15', name: 'Mission 15: Biocentric Architecture (dock, guess)', frame: { O: [2858, 820], U: [2951, 904], V: [3001, 684] }, parts: [
+        { box: [[4, 80], [6, 76], [0, 50]], color: C.tan }, { box: [[4, 80], [6, 76], [50, 56]], color: C.brightGreen, studs: true },
+        { box: [[4, 40], [6, 76], [56, 62]], color: C.black, studs: true },
+        { box: [[44, 76], [10, 40], [56, 60]], color: C.red }, { box: [[48, 72], [14, 36], [56, 58]], color: C.clear, opacity: 0.5 },
+        ...frameUp(4, 80, 0, 8, 0, 54, C.brightGreen),
+        { box: [[20, 34], [-1, 1], [14, 34]], color: C.clear, opacity: 0.6 }, { box: [[50, 64], [-1, 1], [14, 34]], color: C.clear, opacity: 0.6 },
+        { box: [[78, 92], [30, 40], [34, 40]], color: C.red }, ...dockFrame(84, 133),
+    ] };
+
+    const MODELS = [M0607, M11, M01, M02, M03, M04, M05, M0809, M10A, M10B, M12A, M12B, M13, M14, M15];
 
     /** Every part of a model as shapes in wireframe pixels: prism (poly), cyl, sphere, beam (a, b with z), studs. */
     function pieces(model) {
@@ -137,7 +264,7 @@
         for (const p of model.parts) {
             if (p.box) {
                 const [[u0, u1], [v0, v1], [z0, z1]] = p.box;
-                out.push({ kind: 'prism', poly: [px(u0, v0), px(u1, v0), px(u1, v1), px(u0, v1)], z0, z1, color: p.color, opacity: p.opacity });
+                out.push({ kind: 'prism', poly: [px(u0, v0), px(u1, v0), px(u1, v1), px(u0, v1)], z0, z1, color: p.color, opacity: p.opacity, group: p.group });
                 if (p.studs === true) studsOn(u0, u1, v0, v1, z1, p.color);
             } else if (p.cyl) {
                 const c = px(...p.cyl);
@@ -170,7 +297,15 @@
         return out;
     }
 
-    const Models3D = { MODELS, pieces, MM_PER_PX };
+    /** Wireframe pixel for model millimetres (u, v) */
+    function framePx(model, u, v) {
+        const f = model.frame;
+        const unit = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
+        const eu = unit(f.O, f.U), ev = unit(f.O, f.V);
+        return [f.O[0] + (u * eu[0] + v * ev[0]) / MM_PER_PX, f.O[1] + (u * eu[1] + v * ev[1]) / MM_PER_PX];
+    }
+
+    const Models3D = { MODELS, pieces, framePx, MM_PER_PX };
     if (typeof module !== 'undefined' && module.exports) module.exports = Models3D;
     else root.Models3D = Models3D;
 })(this);

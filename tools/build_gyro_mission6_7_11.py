@@ -14,8 +14,8 @@ Run from the project root: python3 tools/build_gyro_mission6_7_11.py
 """
 import io, json, math, os, random, string, sys, zipfile
 
-SRC = 'Harrison_Lucas_Kai_leafcutter_gyro.llsp3'
-OUT = 'gyro-mission6-7-11.llsp3'
+SRC = 'archived-llsp3/Harrison_Lucas_Kai_leafcutter_gyro.llsp3'   # archived 2026-10-24
+OUT = 'archived-llsp3/gyro-mission6-7-11.llsp3'
 VAR_NAME = 'heading'
 ERR_NAME = 'error'
 

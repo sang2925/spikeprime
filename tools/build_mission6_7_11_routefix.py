@@ -12,7 +12,7 @@ Run from the project root: python3 tools/build_mission6_7_11_routefix.py [routef
 """
 import io, json, math, os, random, string, sys, zipfile
 
-SRC = 'gyro-mission6-7-11.llsp3'
+SRC = 'archived-llsp3/gyro-mission6-7-11.llsp3'   # archived 2026-10-24, still the source
 BLOCKS = [('@jw(EldY.h)p@c]2x9Lb', '47'), ('KH=yUg6I[}(Iw!xw@Gzf', '32'), ('++f.b7dpido-JQ{IOS13', '-6')]   # (block id in SRC, old cm)
 NEW_CM = {'routefix': ('35', '29', '-12'), 'routefix_creep': ('40', '28', '-6')}
 CM_ARG = 'w@.(AFiXfRyrQ`59;NMC'

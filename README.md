@@ -21,7 +21,8 @@ This season's game is **BIOGLOW**. These programs try three missions:
 Two buttons at the top make it easier:
 
 - **Kid view** hides all the grown-up settings and turns on the video match settings for you.
-- **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. The leafcutter (Missions 06 and 07) and Mission 11 are built from LEGO bricks, copied by eye from the official building instructions, so they look like the real models. The other models are simple see-through blocks.
+- **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. Every mission model is built from LEGO bricks, copied by eye from the official building instructions. The leafcutter (Missions 06 and 07) and Mission 11 have the most detail.
+- When the robot bumps the back of **Mission 11**, its window (the root cover) falls down, in 2D and 3D, and the page says so.
 
 The simulator is a guess. It is like a weather forecast: useful, but the real robot on the real mat always has the final say.
 
@@ -33,14 +34,19 @@ Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
 |---|---|---|
 | `gyro-mission6-7-11_routefix_creep_push28.llsp3` | **Try this one first.** Our newest version. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
 | `gyro-mission6-7-11_routefix_push28.llsp3` | Same, for a robot that does **not** slide back when it starts a fast turn. | If the turn test says so |
-| `gyro-mission6-7-11_routefix_creep.llsp3` | Older version of the first one (pushes 30 cm, no step notes). | Backup |
-| `gyro-mission6-7-11_routefix.llsp3` | Older version of the second one. | Backup |
-| `gyro-mission6-7-11.llsp3` | Our first gyro version with safety timers. | Backup |
 | `turn-test.llsp3` | A test, not a mission. Turns 90° six times and shows on the hub how far it really turned. | For testing |
 | `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. | To start new missions |
-| `Harrison_Lucas_Kai_leafcutter_uncover.llsp3` | Our very first mission program. | Don't change it! |
-| `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | That first program with a better turn. | Old |
-| `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | The program in our video. | Old |
+
+Older programs and backups are in the **`archived-llsp3/`** folder:
+
+| File | What it is |
+|---|---|
+| `gyro-mission6-7-11_routefix_creep.llsp3` | Older version of our newest program (pushes 30 cm, no step notes) |
+| `gyro-mission6-7-11_routefix.llsp3` | Older version of the second one |
+| `gyro-mission6-7-11.llsp3` | Our first gyro version with safety timers |
+| `Harrison_Lucas_Kai_leafcutter_uncover.llsp3` | Our very first mission program. Don't change it! |
+| `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | That first program with a better turn |
+| `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | The program in our video |
 
 None of the new programs has been tested on the real robot yet. Test them on the mat before a competition!
 
@@ -61,6 +67,7 @@ None of the new programs has been tested on the real robot yet. Test them on the
 | | `route-from-video.md` and `route-from-video.png`: where the robot really went in our video (for grown-ups, lots of detail) |
 | `simulator/` | The simulator web page and its code |
 | `tools/` | Computer helpers (Python and JavaScript) that build and check our programs. Grown-ups only. |
+| `archived-llsp3/` | Old programs and backups (see above) |
 | `samples/` | Example SPIKE files we use as a reference. Don't change them. |
 | `paths/` | Old drawings of the robot's path |
 

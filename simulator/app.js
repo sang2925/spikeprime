@@ -428,6 +428,7 @@ function render() {
     
     // Draw optional obstacles, then BIOGLOW mission markers (labels only)
     drawObstacles();
+    drawMissionModels2d();
     if (state.bgIsBioglow && state.showMissions) drawMissions();
     
     // Draw traveled path
@@ -1165,8 +1166,64 @@ function afterSimChange() {
     updateTelemetry();
     updateLocks();
     updateProgramView();
+    checkMissions();
+    updateMissionStatus();
     announceStatus();
     render();
+}
+
+// ---------------------------------------------------------------------------
+// Mission models that react (picture only, not scoring): Mission 11's root cover falls when the robot touches the
+// back of the model during a program run. ponytail: any touch on the back half counts; how hard the real model needs
+// bumping is not modelled.
+// ---------------------------------------------------------------------------
+const missionState = { m11: false };
+const missionStatusEl = document.getElementById('mission-status');
+let m11Geo = null;
+function m11Geometry() {
+    if (m11Geo && m11Geo.key === `${state.matX},${state.matY},${state.matRotation}`) return m11Geo;
+    const model = Models3D.MODELS.find((m) => m.key === 'm11');
+    const W = ([u, v]) => { const [x, y] = Models3D.framePx(model, u, v); return wireframePxToWorld(x, y); };
+    const poly = BioglowMissions.OBSTACLES.find((o) => o.key === 'm11').corners.map(([x, y]) => wireframePxToWorld(x, y));
+    const centre = W([40, 38]), front = W([40, 0]);
+    m11Geo = { key: `${state.matX},${state.matY},${state.matRotation}`, poly, centre, out: [front[0] - centre[0], front[1] - centre[1]], flat: model.flat.map(W) };
+    return m11Geo;
+}
+function insidePoly([x, y], poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+}
+function checkMissions() {
+    if (missionState.m11 || !lastRunner || !sim.body) return;
+    const g = m11Geometry();
+    const back = (sim.pose.x - g.centre[0]) * g.out[0] + (sim.pose.y - g.centre[1]) * g.out[1] < 0;
+    if (!back) return;
+    const polys = SimPhysics.bodyPolys(sim.pose, sim.body);
+    const touch = polys.some((r) => SimPhysics.polygonGap(r.poly, g.poly) < 1.5 || r.poly.some((p) => insidePoly(p, g.poly)) || g.poly.some((p) => insidePoly(p, r.poly)));
+    if (touch) missionState.m11 = true;
+}
+function updateMissionStatus() {
+    missionStatusEl.textContent = !lastRunner ? '' : missionState.m11
+        ? 'Mission 11: the robot bumped the back, so the window (root cover) fell down. ✓ (simulated)'
+        : 'Mission 11: window still up.';
+}
+function drawMissionModels2d() {
+    if (!missionState.m11) return;
+    const g = m11Geometry();
+    ctx.save();
+    ctx.fillStyle = 'rgba(90, 45, 26, 0.9)';
+    ctx.strokeStyle = '#c91a09';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    g.flat.forEach(([x, y], i) => { const [sx, sy] = worldToScreen(x, y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
 }
 
 // Screen readers: say where the run is whenever it stops or pauses (not every frame while it runs)
@@ -1271,6 +1328,7 @@ btnSimReset.addEventListener('click', () => {
     lastRunner = null;
     pauseAtBlock = null;
     blocksStarted = 0;
+    missionState.m11 = false;
     afterSimChange();
 });
 
@@ -1460,6 +1518,7 @@ function runProgram(pauseAt, instant, keepHistory) {
     pausedByHiddenTab = false;
     pauseAtBlock = pauseAt || null;
     blocksStarted = 0;
+    missionState.m11 = false;
     pausedAtBlockStart = false;
     if (!keepHistory) stepHistory = [];
     applyObstacles();
@@ -1480,7 +1539,7 @@ function runProgram(pauseAt, instant, keepHistory) {
     lastRunner = runner;
     const errors = SimPhysics.startProgram(sim, runner);
     if (!errors.length && instant) {
-        while (sim.status === 'running') SimPhysics.stepSim(sim);   // MAX_PROGRAM_S in physics ends endless loops
+        while (sim.status === 'running') { SimPhysics.stepSim(sim); checkMissions(); }   // MAX_PROGRAM_S in physics ends endless loops
     }
     afterSimChange();
     if (!errors.length && !instant) startLoop();
@@ -1804,6 +1863,7 @@ function update3d() {
         background: bg,
         obstacles: sim.obstacles.filter((o) => !MODEL_OUTLINES.has(o.name)),   // these two are drawn as LEGO models instead
         models: models3dWorld(),
+        modelState: { m11: missionState.m11 },
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
             parts: sim.body ? sim.body.parts : [] },
@@ -1812,8 +1872,8 @@ function update3d() {
     });
 }
 
-// The two LEGO-style models (models3d.js) in table mm, recomputed when the mat moves
-const MODEL_OUTLINES = new Set(BioglowMissions.OBSTACLES.filter((o) => ['m11', 'm0607'].includes(o.key)).map((o) => o.name));
+// The LEGO-style models (models3d.js) in table mm, recomputed when the mat moves
+const MODEL_OUTLINES = new Set(BioglowMissions.OBSTACLES.filter((o) => Models3D.MODELS.some((m) => m.key === o.key)).map((o) => o.name));
 let models3dCache = { key: '', list: [] };
 function models3dWorld() {
     const key = `${state.matX},${state.matY},${state.matRotation}`;
@@ -1830,9 +1890,16 @@ function models3dWorld() {
             if (p.along) q.along = dir(p.a, p.along);
             return q;
         });
+        let hinge = null;
+        if (m.hinge) {
+            const H = ([u, v]) => W(Models3D.framePx(m, u, v));
+            const o0 = H([40, 0]), o1 = H(m.hinge.outward);
+            hinge = { a: H(m.hinge.a), az: m.hinge.a[2], b: H(m.hinge.b), bz: m.hinge.b[2], outward: [o1[0] - o0[0], o1[1] - o0[1]] };
+        }
         const xs = pieces.filter((p) => p.poly).flatMap((p) => p.poly);
         const labelAt = [xs.reduce((t, p) => t + p[0], 0) / xs.length, xs.reduce((t, p) => t + p[1], 0) / xs.length];
-        return { key: m.key, label: m.label, pieces, labelAt };
+        const top = Math.max(...pieces.map((p) => Math.max(p.z1 ?? 0, (p.z ?? 0) + (p.r ?? 0), p.az ?? 0, p.bz ?? 0)));
+        return { key: m.key, label: m.label, pieces, labelAt, labelZ: top + 45, hinge };
     });
     models3dCache = { key, list };
     return list;

@@ -18,8 +18,8 @@ from build_gyro_mission6_7_11 import comment_height, new_id   # same id style an
 from mission6_7_11_comments import TEXT as MISSION_TEXT        # the full WORDS TO KNOW from gyro-mission6-7-11
 
 TEMPLATE = 'Team Template.llsp3'
-OLD_SRC = 'Harrison_Lucas_Kai_leafcutter_uncover.llsp3'
-NEW_SRC = 'gyro-mission6-7-11.llsp3'
+OLD_SRC = 'archived-llsp3/Harrison_Lucas_Kai_leafcutter_uncover.llsp3'   # archived 2026-10-24
+NEW_SRC = 'archived-llsp3/gyro-mission6-7-11.llsp3'
 OUT = 'turn-test.llsp3'
 
 TEXT = {

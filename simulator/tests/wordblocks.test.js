@@ -9,6 +9,7 @@ const L = require('../llsp3.js');
 const W = require('../wordblocks.js');
 
 const ROOT = path.join(__dirname, '..', '..');
+const fileAt = (file) => [path.join(ROOT, file), path.join(ROOT, 'archived-llsp3', file)].find((p) => fs.existsSync(p)) || path.join(ROOT, file);   // old programs live in archived-llsp3/
 const PROFILE = P.DEFAULT_PROFILE;
 const MM_PER_MOTOR_DEG = Math.PI * PROFILE.wheelDiameterMm / 360 / PROFILE.gearRatio;
 const START = { x: 1000, y: 500, headingDeg: 90 };
@@ -16,7 +17,7 @@ const near = (actual, expected, tol, what) =>
     assert.ok(Math.abs(actual - expected) <= tol, `${what}: got ${actual}, expected ${expected} ± ${tol}`);
 
 async function loadTarget(file) {
-    return (await L.readLlsp3(fs.readFileSync(path.join(ROOT, file)))).target;
+    return (await L.readLlsp3(fs.readFileSync(fileAt(file)))).target;
 }
 
 /** Run a compiled program to the end; returns the sim, runner and the pose when each main block started */
@@ -69,10 +70,10 @@ function builder() {
 test('reads all four team projects (read-only) and finds their start stacks', async () => {
     for (const [file, stacks] of [['Team Template.llsp3', 1], ['Harrison_Lucas_Kai_leafcutter_gyro.llsp3', 1],
         ['Harrison_Lucas_Kai_leafcutter_uncover.llsp3', 1], ['Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3', 1]]) {
-        const before = fs.statSync(path.join(ROOT, file)).mtimeMs;
+        const before = fs.statSync(fileAt(file)).mtimeMs;
         const program = W.compileProgram(await loadTarget(file));
         assert.equal(program.stacks.length, stacks, file);
-        assert.equal(fs.statSync(path.join(ROOT, file)).mtimeMs, before, `${file} must not change`);
+        assert.equal(fs.statSync(fileAt(file)).mtimeMs, before, `${file} must not change`);
     }
 });
 

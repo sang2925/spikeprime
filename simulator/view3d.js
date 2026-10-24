@@ -131,40 +131,58 @@
         function lambert(color, opacity) {
             return new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity: opacity ?? 1 });
         }
+        const hinged = {};   // model key -> { pivot, axis, sign, angle, target }
         function buildModel(m) {
             const g = new THREE.Group();
+            let hingeGroup = null;
+            if (m.hinge) {   // parts that swing (Mission 11's root cover) go in a group that turns about the hinge line
+                const a = toV(m.hinge.a[0], m.hinge.a[1], m.hinge.az), b = toV(m.hinge.b[0], m.hinge.b[1], m.hinge.bz);
+                const axis = b.clone().sub(a).normalize();
+                const out = new THREE.Vector3(m.hinge.outward[0], 0, -m.hinge.outward[1]);
+                const sign = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 1, 0)).dot(out) >= 0 ? 1 : -1;   // fall outward
+                const pivot = new THREE.Group();
+                pivot.position.copy(a);
+                hingeGroup = new THREE.Group();
+                hingeGroup.position.copy(a).multiplyScalar(-1);
+                pivot.add(hingeGroup);
+                g.add(pivot);
+                const old = hinged[m.key];
+                hinged[m.key] = { pivot, axis, sign, angle: old ? old.angle : 0, target: old ? old.target : 0 };
+                pivot.setRotationFromAxisAngle(axis, sign * hinged[m.key].angle);
+            }
             for (const p of m.pieces) {
+                const parent = p.group && hingeGroup ? hingeGroup : g;
                 if (p.kind === 'prism') {
                     const geo = new THREE.ExtrudeGeometry(new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: p.z1 - p.z0, bevelEnabled: false });
                     geo.rotateX(-Math.PI / 2);
                     const mesh = new THREE.Mesh(geo, lambert(p.color, p.opacity));
                     mesh.position.y = p.z0;
-                    g.add(mesh);
+                    parent.add(mesh);
                 } else if (p.kind === 'cyl') {
                     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.r2, p.r, p.z1 - p.z0, 20), lambert(p.color));
                     mesh.position.copy(toV(p.c[0], p.c[1], (p.z0 + p.z1) / 2));
-                    g.add(mesh);
+                    parent.add(mesh);
                 } else if (p.kind === 'disc') {   // a wheel standing on edge, its axle along p.axis (a unit vector on the mat)
                     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.thick, 24), lambert(p.color));
                     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(p.axis[0], 0, -p.axis[1]));
                     mesh.position.copy(toV(p.c[0], p.c[1], p.z));
-                    g.add(mesh);
+                    parent.add(mesh);
                 } else if (p.kind === 'sphere') {
                     const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.r, 16, 12), lambert(p.color));
                     mesh.position.copy(toV(p.c[0], p.c[1], p.z));
-                    g.add(mesh);
+                    parent.add(mesh);
                 } else if (p.kind === 'beam') {   // a bar from a to b; flatten = a thin slab (leaves), facing along p.along
                     const a = toV(p.a[0], p.a[1], p.az), b = toV(p.b[0], p.b[1], p.bz), len = a.distanceTo(b);
                     const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.flatten ? 2 : p.w, len, p.w), lambert(p.color));
                     mesh.position.copy(a).add(b).multiplyScalar(0.5);
                     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
                     if (p.along) mesh.rotateY(Math.atan2(p.along[1], p.along[0]));
-                    g.add(mesh);
+                    parent.add(mesh);
                 } else if (p.kind === 'studs') {
                     const inst = new THREE.InstancedMesh(studGeo, lambert(p.color), p.pts.length);
                     const mtx = new THREE.Matrix4();
                     p.pts.forEach(([x, y], i) => inst.setMatrixAt(i, mtx.makeTranslation(x, p.z + 0.9, -y)));
-                    g.add(inst);
+                    parent.add(inst);
                 }
             }
             // floating label so kids can see which mission it is
@@ -178,7 +196,7 @@
             ctx.fillText(m.label, 128, 52);
             const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
             label.scale.set(120, 45, 1);
-            label.position.copy(toV(m.labelAt[0], m.labelAt[1], 170));
+            label.position.copy(toV(m.labelAt[0], m.labelAt[1], m.labelZ || 170));
             g.add(label);
             fieldGroup.add(g);
         }
@@ -242,12 +260,36 @@
             if (rk !== robotKey) { robotKey = rk; buildRobot(r); }
             robot.position.copy(toV(r.x, r.y));
             robot.rotation.y = r.headingDeg * Math.PI / 180;
+            for (const [key, down] of Object.entries(d.modelState || {})) if (hinged[key]) hinged[key].target = down ? Math.PI / 2 : 0;
+            animateHinges();
             const n = d.showPath ? d.path.length : 0;
             if (n !== pathLen) { pathLen = n; buildPath(d.showPath ? d.path : []); }
             draw();
         }
 
         resize();
+        // Swing hinged parts towards their target (about a quarter turn in 0.4 s), then stop asking for frames
+        let swinging = false, lastT = 0;
+        function animateHinges() {
+            if (swinging) return;
+            const step = (t) => {
+                const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
+                lastT = t;
+                let moving = false;
+                for (const h of Object.values(hinged)) {
+                    if (h.angle === h.target) continue;
+                    const d = h.target - h.angle, max = 4 * dt;
+                    h.angle = Math.abs(d) <= max ? h.target : h.angle + Math.sign(d) * max;
+                    h.pivot.setRotationFromAxisAngle(h.axis, h.sign * h.angle);
+                    moving = true;
+                }
+                renderer.render(scene, camera);
+                if (moving) requestAnimationFrame(step); else { swinging = false; lastT = 0; }
+            };
+            swinging = true;
+            requestAnimationFrame(step);
+        }
+
         /** Look at table point (x, y) mm from about dist mm away, from the front-right */
         function focus(x, y, dist = 600) {
             controls.target.copy(toV(x, y, 40));
