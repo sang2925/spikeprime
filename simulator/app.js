@@ -143,6 +143,7 @@ const bgOrientationInput = document.getElementById('bg-orientation');
 const aspectCheck = document.getElementById('aspect-check');
 
 const robotLengthInput = document.getElementById('robot-length');
+const robotOffsetInput = document.getElementById('robot-offset');
 const robotWidthInput = document.getElementById('robot-width');
 const robotXInput = document.getElementById('robot-x');
 const robotYInput = document.getElementById('robot-y');
@@ -160,6 +161,7 @@ const driveMaxSpeedInput = document.getElementById('drive-max-speed');
 const driveLeftSignInput = document.getElementById('drive-left-sign');
 const driveRightSignInput = document.getElementById('drive-right-sign');
 const driveTurnOvershootInput = document.getElementById('drive-turn-overshoot');
+const driveTurnCreepInput = document.getElementById('drive-turn-creep');
 const driveErrors = document.getElementById('drive-errors');
 
 const testLeftInput = document.getElementById('test-left');
@@ -189,6 +191,7 @@ const programInfo = document.getElementById('program-info');
 const programMoveModeInput = document.getElementById('program-move-mode');
 const btnProgramRun = document.getElementById('btn-program-run');
 const btnProgramNext = document.getElementById('btn-program-next');
+const btnProgramPrev = document.getElementById('btn-program-prev');
 const programNow = document.getElementById('program-now');
 const programList = document.getElementById('program-list');
 const programNotes = document.getElementById('program-notes');
@@ -588,9 +591,14 @@ function drawRobot() {
     const pixelLength = state.robotLength * scale;
     const pixelWidth = state.robotWidth * scale;
     
-    // Draw robot body
+    // Draw robot body (and attachments), shifted forward by the body offset; the wheels stay on the robot's position
+    const off = (state.robotOffset || 0) * scale;
     ctx.fillStyle = 'rgba(233, 69, 96, 0.8)';
-    ctx.fillRect(-pixelLength / 2, -pixelWidth / 2, pixelLength, pixelWidth);
+    ctx.fillRect(off - pixelLength / 2, -pixelWidth / 2, pixelLength, pixelWidth);
+    for (const part of sim.body ? sim.body.parts : []) {   // the robot's left is screen-up here
+        ctx.fillStyle = 'rgba(160, 160, 160, 0.9)';
+        ctx.fillRect(off + part.back * scale, -part.left * scale, (part.front - part.back) * scale, (part.left - part.right) * scale);
+    }
     
     // Draw drive wheels, centred track width apart (wheel length = diameter)
     const wheelLength = sim.profile.wheelDiameterMm * scale;
@@ -949,6 +957,13 @@ robotWidthInput.addEventListener('input', () => {
     render();
 });
 
+robotOffsetInput.addEventListener('input', () => {
+    const v = parseFloat(robotOffsetInput.value);
+    state.robotOffset = Number.isFinite(v) ? Math.max(-80, Math.min(80, v)) : 0;
+    applyObstacles();
+    render();
+});
+
 robotXInput.addEventListener('input', () => {
     state.robotX = parseFloat(robotXInput.value) || 0;
     render();
@@ -1050,9 +1065,13 @@ function updateLocks() {
     tableWallsInput.disabled = active;
     obstacleInputs.forEach(({ box }) => { box.disabled = active; });
     document.getElementById('obstacle-all-on').disabled = active;
+    contactPushInput.disabled = active;
+    frontPusherInput.disabled = active;
     document.getElementById('obstacle-all-off').disabled = active;
     btnProgramRun.disabled = active || !loadedProgram;
     btnProgramNext.disabled = !loadedProgram || (active && !(sim.program && sim.status === 'paused'));
+    btnProgramPrev.disabled = !loadedProgram || blocksStarted < 1 || (active && !(sim.program && sim.status === 'paused'));
+    document.getElementById('btn-video-match').disabled = active;
 }
 
 const clearanceEl = document.getElementById('clearance');
@@ -1083,8 +1102,39 @@ function updateClearanceView() {
     }
 }
 
+const turnsEl = document.getElementById('turns');
+let lastTurnsKey = '';
+
+/** Turns table, newest last: built with textContent only (block names come from the opened .llsp3) */
+function updateTurnsView() {
+    const rows = sim.turns.slice(-12);
+    const key = `${sim.turns.length}:${rows.length ? rows[rows.length - 1].endS : 0}`;
+    if (key === lastTurnsKey) return;
+    lastTurnsKey = key;
+    turnsEl.replaceChildren();
+    if (!rows.length) {
+        turnsEl.insertRow().insertCell().textContent = 'No in-place turns yet.';
+        return;
+    }
+    const head = turnsEl.insertRow();
+    ['Turn', 'Turned', 'Centre moved', 'Nearest'].forEach((h) => { const th = document.createElement('th'); th.textContent = h; head.append(th); });
+    for (const t of rows) {
+        const tr = turnsEl.insertRow();
+        tr.insertCell().textContent = t.block || 'movement test';
+        const right = -t.turnedDeg;                      // Word Blocks sign: right (clockwise) is +
+        tr.insertCell().textContent = `${Math.abs(right).toFixed(1)}° ${right >= 0 ? 'right' : 'left'}`;
+        const moved = Math.hypot(t.forwardMm, t.sideMm);
+        tr.insertCell().textContent = moved < 0.5 ? '0 mm' : `${moved.toFixed(1)} mm ${t.forwardMm < 0 ? 'back' : 'forward'}`;
+        const n = t.nearest;
+        const cell = tr.insertCell();
+        cell.textContent = n ? `${n.name.replace(/ \(.*\)$/, '')}: ${n.mm < 0.05 ? 'touching' : `${n.mm.toFixed(0)} mm`} (${n.part})` : '–';
+        if (n && n.mm < 1) cell.className = 'warning'; else if (n && n.mm < 10) cell.className = 'info';
+    }
+}
+
 function updateTelemetry() {
     updateClearanceView();
+    updateTurnsView();
     const { x, y, headingDeg } = sim.pose;
     telStatus.textContent = sim.status + (sim.status === 'paused' && pausedByHiddenTab ? ' (tab was hidden)' : '');
     telTime.textContent = `${sim.timeS.toFixed(3)} s`;
@@ -1109,7 +1159,18 @@ function afterSimChange() {
     updateTelemetry();
     updateLocks();
     updateProgramView();
+    announceStatus();
     render();
+}
+
+// Screen readers: say where the run is whenever it stops or pauses (not every frame while it runs)
+const srStatus = document.getElementById('sr-status');
+let lastAnnounced = '';
+function announceStatus() {
+    if (sim.status === 'running') { lastAnnounced = ''; return; }
+    const block = programNow.textContent.split(' › ')[0];
+    const msg = [sim.status === 'stopped' ? '' : `Run ${sim.status}.`, block, sim.contact].filter(Boolean).join(' ');
+    if (msg !== lastAnnounced) srStatus.textContent = lastAnnounced = msg;
 }
 
 function frame(nowMs) {
@@ -1202,7 +1263,8 @@ btnSimReset.addEventListener('click', () => {
     pausedByHiddenTab = false;
     movedByHand = false;
     lastRunner = null;
-    stepPauseKeys = null;
+    pauseAtBlock = null;
+    blocksStarted = 0;
     afterSimChange();
 });
 
@@ -1231,7 +1293,10 @@ btnPathClear.addEventListener('click', () => {
 
 let loadedProgram = null;   // compiled program
 let lastRunner = null;      // runner of the current or last run (sensors, notes, highlight)
-let stepPauseKeys = null;   // "Next block": pause when a main block not in this set starts
+let pauseAtBlock = null;    // Next/Previous block: pause when this many main blocks have started (null = run on)
+let blocksStarted = 0;      // main blocks started this run
+let pausedAtBlockStart = false;   // the last pause came from Next/Previous, not from a model or the Pause button
+let stepHistory = [];       // blocksStarted at each Next/Previous stop, so Previous retraces the same stops
 let programItemEls = [];    // [stack][item] -> <li>
 let shownNotes = 0;
 
@@ -1303,11 +1368,13 @@ async function loadProgramFile(file) {
         programInfo.className = 'info';
         const start = manifest && BioglowMissions.START_POSES[manifest.name];
         if (start) {
-            state.robotX = start.x;
-            state.robotY = start.y;
+            // start poses are where the body's middle was measured; the robot's position is its wheel axle
+            const h = start.heading * Math.PI / 180, off = state.robotOffset || 0;
+            state.robotX = start.x - off * Math.cos(h);
+            state.robotY = start.y - off * Math.sin(h);
             state.robotHeading = start.heading;
-            robotXInput.value = start.x.toFixed(1);
-            robotYInput.value = start.y.toFixed(1);
+            robotXInput.value = state.robotX.toFixed(1);
+            robotYInput.value = state.robotY.toFixed(1);
             robotHeadingInput.value = start.heading.toFixed(1);
             render();
             btnSavePose.click();
@@ -1359,11 +1426,20 @@ document.addEventListener('drop', async (e) => {
     await loadProgramFile(file);
 });
 
-/** Reset to the saved start pose, then run the loaded program. stepMode pauses as soon as the first block starts. */
-function runProgram(stepMode) {
+/**
+ * Reset to the saved start pose, then run the loaded program. pauseAt (optional): pause when that many main blocks
+ * have started. instant: run straight there without animating (Previous block; the simulation is deterministic,
+ * so replaying from the start lands exactly where the earlier run was).
+ */
+function runProgram(pauseAt, instant, keepHistory) {
     const turnOvershootDeg = parseFloat(driveTurnOvershootInput.value);
     if (!(turnOvershootDeg >= 0 && turnOvershootDeg <= 45)) {
         showDriveErrors(['Turn overshoot must be a number from 0 to 45°.']);
+        return;
+    }
+    const turnCreepMm = parseFloat(driveTurnCreepInput.value);
+    if (!(turnCreepMm >= 0 && turnCreepMm <= 300)) {
+        showDriveErrors(['Turn creep must be a number from 0 to 300 mm.']);
         return;
     }
     SimPhysics.setProfile(sim, readProfile());
@@ -1376,35 +1452,59 @@ function runProgram(stepMode) {
     const sp = state.startPose;
     SimPhysics.resetSim(sim, { x: sp.x, y: sp.y, headingDeg: sp.heading });
     pausedByHiddenTab = false;
-    stepPauseKeys = stepMode ? new Set() : null;
+    pauseAtBlock = pauseAt || null;
+    blocksStarted = 0;
+    pausedAtBlockStart = false;
+    if (!keepHistory) stepHistory = [];
     applyObstacles();
     const runner = WordBlocks.createRunner(loadedProgram, {
         plainMoveMode: programMoveModeInput.value,
         turnOvershootDeg,
-        onTopBlock: (t, i) => {
-            if (stepPauseKeys && !stepPauseKeys.has(`${t}:${i}`)) {
-                stepPauseKeys = null;
+        turnCreepMm,
+        onTopBlock: () => {
+            blocksStarted++;
+            if (pauseAtBlock !== null && blocksStarted >= pauseAtBlock) {
+                pauseAtBlock = null;
+                pausedAtBlockStart = true;
+                if (stepHistory[stepHistory.length - 1] !== blocksStarted) stepHistory.push(blocksStarted);
                 SimPhysics.pause(sim);
             }
         },
     });
     lastRunner = runner;
     const errors = SimPhysics.startProgram(sim, runner);
+    if (!errors.length && instant) {
+        while (sim.status === 'running') SimPhysics.stepSim(sim);   // MAX_PROGRAM_S in physics ends endless loops
+    }
     afterSimChange();
-    if (!errors.length) startLoop();
+    if (!errors.length && !instant) startLoop();
 }
 
-btnProgramRun.addEventListener('click', () => runProgram(false));
+btnProgramRun.addEventListener('click', () => runProgram());
 
 btnProgramNext.addEventListener('click', () => {
     if (sim.program && sim.status === 'paused') {
-        stepPauseKeys = new Set(sim.program.threads.map((t) => `${t.index}:${t.topIndex}`));
+        pauseAtBlock = blocksStarted + 1;
+        pausedAtBlockStart = false;
         SimPhysics.resume(sim);
         afterSimChange();
         startLoop();
     } else if (!SimPhysics.isActive(sim) && loadedProgram) {
-        runProgram(true);
+        runProgram(1);
     }
+});
+
+// Back one block: replay from the start to the start of the block before this one (or of this block, when the
+// run stopped part-way through it: finished, touched a model, or Pause)
+btnProgramPrev.addEventListener('click', () => {
+    if (!loadedProgram || (SimPhysics.isActive(sim) && !(sim.program && sim.status === 'paused'))) return;
+    let target = blocksStarted;   // stopped part-way: back to the start of this block
+    if (pausedAtBlockStart) {
+        stepHistory.pop();
+        target = stepHistory.length ? stepHistory[stepHistory.length - 1] : Math.max(1, blocksStarted - 1);
+    }
+    SimPhysics.stop(sim);
+    runProgram(Math.max(1, target), true, true);
 });
 
 // Pause when the tab is hidden; the user resumes by hand, and resume adds no catch-up time
@@ -1558,6 +1658,10 @@ missionShowInput.addEventListener('change', () => {
 
 // Table walls and optional obstacles (missions.js OBSTACLES). Obstacles are fixed to the BIOGLOW wireframe, so they follow the mat, not the background crop.
 const tableWallsInput = document.getElementById('table-walls');
+const contactPushInput = document.getElementById('contact-push');
+const frontPusherInput = document.getElementById('front-pusher');
+// mm from the wheel midpoint, measured on video frames (robot body 184 mm long): about 42 mm out, 43 mm wide, 12 mm left
+const FRONT_PUSHER = { name: 'the front pusher', front: 134, back: 92, left: 34, right: -9 };
 const obstacleListEl = document.getElementById('obstacle-list');
 const obstacleInputs = BioglowMissions.OBSTACLES.map((o) => {
     const row = document.createElement('div');
@@ -1585,7 +1689,9 @@ function applyObstacles() {
     const obstacles = obstacleInputs.filter(({ box }) => box.checked)
         .map(({ o }) => ({ name: o.name, poly: o.corners.map(([ix, iy]) => wireframePxToWorld(ix, iy)) }));
     const bounds = tableWallsInput.checked ? { minX: 0, minY: 0, maxX: TABLE_INTERIOR_X, maxY: TABLE_INTERIOR_Y } : null;
-    SimPhysics.setObstacles(sim, obstacles, { lengthMm: state.robotLength, widthMm: state.robotWidth }, bounds);
+    const parts = frontPusherInput.checked ? [FRONT_PUSHER] : [];
+    SimPhysics.setObstacles(sim, obstacles, { lengthMm: state.robotLength, widthMm: state.robotWidth, offsetMm: state.robotOffset || 0, parts }, bounds);
+    SimPhysics.setContactMode(sim, contactPushInput.checked ? 'push' : 'pause');
 }
 
 function drawObstacles() {
@@ -1620,11 +1726,29 @@ function markPresetCustom() {
 programMoveModeInput.addEventListener('change', markPresetCustom);
 driveTurnOvershootInput.addEventListener('input', markPresetCustom);
 
+// The settings behind docs/route-from-video.png and the route-fix sweeps (simulator/tools/mission6_7_11_sweep.js)
+document.getElementById('btn-video-match').addEventListener('click', () => {
+    if (SimPhysics.isActive(sim)) return;
+    programMoveModeInput.value = 'app-guess';
+    driveTurnOvershootInput.value = '2';
+    driveTurnCreepInput.value = '60';
+    robotOffsetInput.value = '0';
+    robotOffsetInput.dispatchEvent(new Event('input'));
+    markPresetCustom();
+    tableWallsInput.checked = true;
+    contactPushInput.checked = true;
+    frontPusherInput.checked = true;
+    obstacleInputs.forEach(({ o, box }) => { box.checked = o.key !== 'm0607'; });
+    obstaclesChanged();
+});
+
 function obstaclesChanged() {
     applyObstacles();
     afterSimChange();
 }
 tableWallsInput.addEventListener('change', obstaclesChanged);
+contactPushInput.addEventListener('change', obstaclesChanged);
+frontPusherInput.addEventListener('change', obstaclesChanged);
 obstacleInputs.forEach(({ box }) => box.addEventListener('change', obstaclesChanged));
 document.getElementById('obstacle-all-on').addEventListener('click', () => { obstacleInputs.forEach(({ box }) => { box.checked = true; }); obstaclesChanged(); });
 document.getElementById('obstacle-all-off').addEventListener('click', () => { obstacleInputs.forEach(({ box }) => { box.checked = false; }); obstaclesChanged(); });
@@ -1662,6 +1786,7 @@ window.addEventListener('resize', resizeCanvas);
 function init() {
     // Resize canvas
     resizeCanvas();
+    btnFitView.click();   // centre the table for whatever size the board box has (phones too)
     
     // Set initial button text
     btnToggleGrid.textContent = 'Hide Grid';

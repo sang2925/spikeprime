@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPIKE Prime Browser Simulator - Milestone B</title>
+    <title>SPIKE Prime Route Simulator</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <header>
             <h1>SPIKE Prime Browser Simulator</h1>
-            <p class="subtitle">Milestone B: Robot Movement and Simulated Sensors, plus .llsp3 program runner</p>
+            <p class="subtitle">Open a Word Blocks program (.llsp3) and watch the route it drives on the BIOGLOW table.</p>
             <p class="warning">Educational planning tool. Not official LEGO software. Not a scoring authority.</p>
         </header>
 
@@ -23,7 +23,7 @@
                     <button id="btn-fit-view">Fit to View</button>
                     <button id="btn-toggle-grid">Toggle Grid</button>
                     <div id="zoom-control">
-                        <label>Zoom: <span id="zoom-value">100%</span></label>
+                        <label for="zoom-slider">Zoom: <span id="zoom-value">100%</span></label>
                         <input type="range" id="zoom-slider" min="10" max="300" value="100">
                     </div>
                 </details>
@@ -40,8 +40,13 @@
                     <p class="note">The team <code>straight</code> My Block is never corrected: it already counts motor degrees.</p>
                     <div class="button-row">
                         <button id="btn-program-run">Run program</button>
-                        <button id="btn-program-next">Next block</button>
+                        <button id="btn-program-prev">◀ Previous block</button>
+                        <button id="btn-program-next">Next block ▶</button>
                     </div>
+                    <div class="button-row">
+                        <button id="btn-video-match">Video match settings</button>
+                    </div>
+                    <p class="note">Video match = the settings behind <code>docs/route-from-video.png</code>: turn creep 60 mm, turn overshoot 2°, body offset 0, Push on, front pusher on, table walls and every model outline on except the leafcutter body (the robot pushes that one). All estimates from the team video. Previous block replays the run from the start, so it lands exactly where it was.</p>
                     <div id="program-now" class="info"></div>
                     <ol id="program-list"></ol>
                     <table id="program-sensors">
@@ -57,7 +62,7 @@
                 <details id="run-controls" open>
                     <summary>Run Controls</summary>
                     <div class="control-row">
-                        <label>Playback speed (×):</label>
+                        <label for="test-playback">Playback speed (×):</label>
                         <select id="test-playback">
                             <option value="0.25">0.25</option>
                             <option value="0.5">0.5</option>
@@ -78,8 +83,10 @@
                         <input type="checkbox" id="table-walls" checked>
                     </div>
                     <p class="note">The robot's whole body box counts, not just its centre. If any corner touches a wall (or a model ticked in BIOGLOW Missions), the run pauses. The body box is centred on the wheels until the body offset is measured.</p>
-                    <p class="note"><strong>Closest approach</strong> (walls and ticked models, nearest first). Gap = body box to the outline, in mm. Clears on Reset or when you tick or untick a model.</p>
+                    <p class="note"><strong>Closest approach</strong> (walls and ticked models, nearest first). Gap = robot body (and the front pusher, if ticked) to the outline, in mm. Clears on Reset or when you tick or untick a model.</p>
                     <table id="clearance"></table>
+                    <p class="note"><strong>Turns</strong> (in-place spins this run). Turned = how far it spun. Centre moved = how far the point between the wheels slid: the simulator's wheels are perfect, so this stays 0 unless the two wheels were told different speeds. On the real robot, a turn that moves the centre means slipping or bumping into something. Nearest = the closest wall or ticked model during that spin, and which part of the robot was nearest.</p>
+                    <table id="turns"></table>
                 </details>
 
 
@@ -87,23 +94,27 @@
                     <summary>Robot Placement</summary>
                     <p class="note">Body size is the team's measurement (no attachments). Drag the robot to move it. Use the 90° buttons to turn it.</p>
                     <div class="control-row">
-                        <label>Body length (mm):</label>
+                        <label for="robot-length">Body length (mm):</label>
                         <input type="number" id="robot-length" step="0.1" value="184.15">
                     </div>
                     <div class="control-row">
-                        <label>Body width (mm):</label>
+                        <label for="robot-width">Body width (mm):</label>
                         <input type="number" id="robot-width" step="0.1" value="168.275">
                     </div>
                     <div class="control-row">
-                        <label>Position X (mm):</label>
+                        <label for="robot-offset">Body offset (mm the body's middle sits ahead of the wheel axle; minus = behind; not measured):</label>
+                        <input type="number" id="robot-offset" step="1" min="-80" max="80" value="0">
+                    </div>
+                    <div class="control-row">
+                        <label for="robot-x">Position X (mm):</label>
                         <input type="number" id="robot-x" step="0.1" value="1181.1">
                     </div>
                     <div class="control-row">
-                        <label>Position Y (mm):</label>
+                        <label for="robot-y">Position Y (mm):</label>
                         <input type="number" id="robot-y" step="0.1" value="571.5">
                     </div>
                     <div class="control-row">
-                        <label>Heading (°, 0 = right, + = counterclockwise):</label>
+                        <label for="robot-heading">Heading (°, 0 = right, + = counterclockwise):</label>
                         <input type="number" id="robot-heading" step="0.1" value="0">
                     </div>
                     <div class="button-row">
@@ -153,10 +164,18 @@
                         <label for="mission-show">Show mission markers on the map:</label>
                         <input type="checkbox" id="mission-show" checked>
                     </div>
-                    <select id="mission-select"></select>
+                    <select id="mission-select" aria-label="Mission"></select>
                     <div id="mission-detail"></div>
                     <p class="note">Markers are labels placed from the wireframe, good to about 15 mm. They are not collision shapes.</p>
-                    <p class="note"><strong>Models that stop the robot</strong> (all off to start with, all estimates). If the robot touches a ticked model, the run pauses.</p>
+                    <p class="note"><strong>Models that stop the robot</strong> (all off to start with, all estimates). If the robot touches a ticked model, the run pauses, unless "push" is ticked.</p>
+                    <div class="control-row">
+                        <label for="contact-push">Push: ticked models shove the robot aside, the run keeps going:</label>
+                        <input type="checkbox" id="contact-push">
+                    </div>
+                    <div class="control-row">
+                        <label for="front-pusher">Front pusher on the robot (from the video: 4 cm out, 4 cm wide, a bit left of centre):</label>
+                        <input type="checkbox" id="front-pusher">
+                    </div>
                     <div class="button-row">
                         <button id="obstacle-all-on">All on</button>
                         <button id="obstacle-all-off">All off</button>
@@ -178,27 +197,27 @@
                     <p class="note">Team robot = plain "move N cm" blocks drive 17.5-cm-per-wheel-turn too far (team record, 20.5 vs 17.5 cm) and every turn goes 5° too far (read from the gyro video). Both are estimates, not measurements. Ideal = the old simulator defaults. Changing either number by hand switches this to Custom.</p>
                     <p class="note">Wheel diameter is from the team record (about 20.5 cm per wheel turn). Everything else is an example or estimate, not a measurement of our robot.</p>
                     <div class="control-row">
-                        <label>Wheel diameter (mm):</label>
+                        <label for="drive-wheel-diameter">Wheel diameter (mm):</label>
                         <input type="number" id="drive-wheel-diameter" step="0.1" value="65.3">
                     </div>
                     <div class="control-row">
-                        <label>Track width (mm, example):</label>
+                        <label for="drive-track-width">Track width (mm, example):</label>
                         <input type="number" id="drive-track-width" step="0.1" value="112">
                     </div>
                     <div class="control-row">
-                        <label>Gear ratio (motor turns per wheel turn, example):</label>
+                        <label for="drive-gear-ratio">Gear ratio (motor turns per wheel turn, example):</label>
                         <input type="number" id="drive-gear-ratio" step="0.01" value="1">
                     </div>
                     <div class="control-row">
-                        <label>Max motor speed at 100% (deg/s, estimate):</label>
+                        <label for="drive-max-speed">Max motor speed at 100% (deg/s, estimate):</label>
                         <input type="number" id="drive-max-speed" step="1" value="1050">
                     </div>
                     <div class="control-row">
-                        <label>Left motor encoder sign (example):</label>
+                        <label for="drive-left-sign">Left motor encoder sign (example):</label>
                         <select id="drive-left-sign"><option value="1">+1</option><option value="-1">-1</option></select>
                     </div>
                     <div class="control-row">
-                        <label>Right motor encoder sign (example):</label>
+                        <label for="drive-right-sign">Right motor encoder sign (example):</label>
                         <select id="drive-right-sign"><option value="1">+1</option><option value="-1">-1</option></select>
                     </div>
                     <p class="note">Encoder sign = which way the motor counts when its wheel rolls forward. It does not change which way the robot drives.</p>
@@ -207,6 +226,11 @@
                         <input type="number" id="drive-turn-overshoot" step="0.5" min="0" max="45" value="5">
                     </div>
                     <p class="note">Not measured (5 is read from the video). 0 = ideal motors that stop at once. Used only by .llsp3 programs: after "stop moving" ends a spin, the robot keeps turning this much further.</p>
+                    <div class="control-row">
+                        <label for="drive-turn-creep">Turn creep (mm the robot slides back when a turn starts at 42% speed; hypothesis):</label>
+                        <input type="number" id="drive-turn-creep" step="5" min="0" max="300" value="0">
+                    </div>
+                    <p class="note">Hypothesis from the team video: fast-starting turns slid back (about 6 cm for <code>turn 85</code>, which starts at 42%; about 0 for <code>turn 20</code>, 16%). Scaled by (start speed - 15%) / 27%. 0 = no creep. Measure it with turn-test on the mat (tape marks).</p>
                     <table>
                         <tr><td>Team movement pair:</td><td>BA</td></tr>
                         <tr><td>Which of A/B is left:</td><td>Not confirmed</td></tr>
@@ -227,15 +251,15 @@
                     <summary>Mat Placement</summary>
                     <p class="note">Aligned to the bottom wall and centred left to right, as the Robot Game Rulebook (Field Setup, Step 1) says.</p>
                     <div class="control-row">
-                        <label>Mat X offset (mm):</label>
+                        <label for="mat-x">Mat X offset (mm):</label>
                         <input type="number" id="mat-x" step="0.01" value="171.45">
                     </div>
                     <div class="control-row">
-                        <label>Mat Y offset (mm):</label>
+                        <label for="mat-y">Mat Y offset (mm):</label>
                         <input type="number" id="mat-y" step="0.01" value="0">
                     </div>
                     <div class="control-row">
-                        <label>Mat rotation (°):</label>
+                        <label for="mat-rotation">Mat rotation (°):</label>
                         <input type="number" id="mat-rotation" step="0.1" value="0">
                     </div>
                     <div id="mat-warning" class="warning hidden">Mat extends outside table!</div>
@@ -260,29 +284,29 @@
                             <input type="checkbox" id="bg-show" checked>
                         </div>
                         <div class="control-row">
-                            <label>Opacity:</label>
+                            <label for="bg-opacity">Opacity:</label>
                             <input type="range" id="bg-opacity" min="0" max="100" value="70">
                             <span id="bg-opacity-value">70%</span>
                         </div>
                         <p class="info">Crop = the part of the image that is the mat edge (image pixels, from top-left).</p>
                         <div class="control-row">
-                            <label>Crop left (px):</label>
+                            <label for="bg-crop-x">Crop left (px):</label>
                             <input type="number" id="bg-crop-x" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Crop top (px):</label>
+                            <label for="bg-crop-y">Crop top (px):</label>
                             <input type="number" id="bg-crop-y" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Crop width (px):</label>
+                            <label for="bg-crop-w">Crop width (px):</label>
                             <input type="number" id="bg-crop-w" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Crop height (px):</label>
+                            <label for="bg-crop-h">Crop height (px):</label>
                             <input type="number" id="bg-crop-h" step="1" value="0">
                         </div>
                         <div class="control-row">
-                            <label>Orientation (°):</label>
+                            <label for="bg-orientation">Orientation (°):</label>
                             <select id="bg-orientation">
                                 <option value="0">0</option>
                                 <option value="90">90</option>
@@ -300,11 +324,11 @@
                 <details id="grid-controls">
                     <summary>Grid Settings</summary>
                     <div class="control-row">
-                        <label>Minor spacing (mm):</label>
+                        <label for="grid-minor">Minor spacing (mm):</label>
                         <input type="number" id="grid-minor" step="1" value="50">
                     </div>
                     <div class="control-row">
-                        <label>Major spacing (mm):</label>
+                        <label for="grid-major">Major spacing (mm):</label>
                         <input type="number" id="grid-major" step="1" value="100">
                     </div>
                 </details>
@@ -313,15 +337,15 @@
                     <summary>Movement Test</summary>
                     <p class="note">Bounded physics test: two wheel speeds for a set time. + speed rolls that wheel forward.</p>
                     <div class="control-row">
-                        <label>Left wheel speed (%):</label>
+                        <label for="test-left">Left wheel speed (%):</label>
                         <input type="number" id="test-left" min="-100" max="100" step="1" value="50">
                     </div>
                     <div class="control-row">
-                        <label>Right wheel speed (%):</label>
+                        <label for="test-right">Right wheel speed (%):</label>
                         <input type="number" id="test-right" min="-100" max="100" step="1" value="50">
                     </div>
                     <div class="control-row">
-                        <label>Duration (simulation s):</label>
+                        <label for="test-duration">Duration (simulation s):</label>
                         <input type="number" id="test-duration" min="0.005" max="600" step="0.1" value="2">
                     </div>
                     <div class="button-row">
@@ -340,7 +364,8 @@
             </aside>
 
             <div id="canvas-container">
-                <canvas id="simulator"></canvas>
+                <canvas id="simulator" role="img" aria-label="Robot game table seen from above: the mat, the robot, the models and the path the robot drove. Robot position and heading are in Robot Placement and Sensors."></canvas>
+                <p id="sr-status" class="sr-only" aria-live="polite"></p>
             </div>
         </main>
 

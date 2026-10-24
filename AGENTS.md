@@ -15,12 +15,25 @@ Create actual files when asked. Do not give only a plan when the task is to buil
 
 Read this first in a new session. Details are in sections 4 and 14.
 
+**Newest (2026-10-23): two route fixes, picked by one mat measurement.** Evidence and full tables: `docs/route-from-video.md` and `docs/route-from-video.png`. The user asked the assistant to work out the route from the video without asking questions, to keep AGENTS.md updated as it went, and to keep going until the result was verified. A separate file was approved. Nothing was run on the robot.
+
+- **What the video shows** (13 frames matched to the official mat picture with SIFT + homography, about ±2-3 cm; block times from the motor sound): the old gyro run only reached the leafcutter and the back of Mission 11 because it **slid**. In `turn 67` the front-right corner jammed on the green and black D2 model: 9 cm of sliding before it turned, 15 cm in all. In `turn 85`, with nothing touching it, it slid **6.5 ± 1 cm** (re-measured with 113-115-point homographies). `turn 20` (slow start) did not slide. Slide grows with the turn's start speed (8 + 0.4 × degrees %). Solving `turn 85` for both unknowns gives creep about 58 ± 15 mm for a 42% start and a body offset of about 8 ± 6 mm (body's middle slightly ahead of the axle). Outlines drawn back onto the frames sit on the real models (`test-results/route-from-video/`, git-ignored).
+- **`gyro-mission6-7-11_routefix_creep.llsp3`** (try first; `.md` notes): straight 47 to **40**, 32 to **28**, back 6 kept. For a robot that slides about 4-7 cm in fast turns. Simulated all-good runs out of 27 for overshoot 0-5°: creep 45 → 13/27/27/26/24/14; creep 60 → 23/27/27/24/20/5; creep 75 → 23/24/23/19/10/0; no creep → 0/0/0/9/25/20 (can touch D2).
+- **`gyro-mission6-7-11_routefix.llsp3`** (`.md` notes): 35 / 29 / back 12. For a robot that does not slide: no creep → 20/27/24/21/18/15, never touches D2; creep 60 → 0/0/1/1/0/0.
+- Both are built by `python3 -I tools/build_mission6_7_11_routefix.py [routefix|routefix_creep]` from `gyro-mission6-7-11.llsp3` (read-only; refuses to overwrite; checks that only the intended numbers and comments differ). Both opened in SPIKE (`tools/spike_open_check.mjs`): the editor shows only the new numbers, B+A is kept, the 16 comments match, no errors. Slot 19. An unused first build of the creep version (40/26/-8) is in `test-results/backups/` (git-ignored).
+- **Simulator additions** (61 tests pass): Push mode, the front pusher, the `m0607stop` outline (where the real push stopped), Turn creep (Drive Settings; `turnCreepMm`), Body offset (Robot Placement; `body.offsetMm`), and the repeatable sweep `node tools/mission6_7_11_sweep.js [--creep=N] [--offset=N] <files>` (outputs in `simulator/test-results/route-fix/`, git-ignored).
+- **Simulator buttons added 2026-10-24** (user request): **Video match settings** (Program panel; sets creep 60, overshoot 2°, offset 0, Push, pusher, walls and all outlines except `m0607`, so the page matches `docs/route-from-video.png`; the page defaults have creep 0, Push off and outlines off, which is why `routefix_creep` looked different there) and **◀ Previous block** next to Next block (replays from the start to the previous Next stop, without animating; checked in the browser that it lands on the identical time and pose). 61 tests still pass.
+- **Leafcutter push depth (2026-10-24, user concern, open):** Mission 06 scores 10 per leaf fragment only while the fragments stay contained in the nest (rulebook p. 10: "move too quickly, and you may scatter the leaves"). Step 11 is `straight 30 at speed 13` in every 6-7-11 version; the real robot stalled after about 24 cm, so it pushes until the lever stops it, not to a planned depth. The simulator's `m0607stop` outline sits about 2.8 cm past the thin lever line printed on the wireframe (wireframe px about (2275,887)-(2309,920)), i.e. the sim copies the video's push depth. Whether the video run kept the leaves is not visible in the footage. Needed: mark on the real model where the lever starts, where the ant first touches the nest, and where fragments start to fall out; then set step 11 to stop between the last two (needs approval).
+- **Push 28 + step notes (2026-10-24, user asked "guess for now" and for a note on every step):** `gyro-mission6-7-11_routefix_creep_push28.llsp3` and `gyro-mission6-7-11_routefix_push28.llsp3` = the route fixes with step 7 (leafcutter push) 30 to 28, plus a one-line note beside each of the 15 steps ("STEP 7: PUSH LEVER (28)": step, what it does, the number to change; drag the note's corner for tips). Steps 1, 6, 12 have their line at the top of the PART 1/2/3 notes. Built by `python3 -I tools/add_step_notes.py <src> <out> --push=28` (refuses to overwrite; reopen check: only the push number and comments differ). Notes sit in two alternating columns (x 400 / 660, width 240, y = 47 + 49 × block index, measured in SPIKE) because one column overlapped. Both opened in SPIKE (28 comments, no errors; screenshots `test-results/spike-open/*_push28/`). Simulated push stall is about 22-23 cm (video about 24), lever line reached about 20 cm, ±5 cm over start spread, so 28 still reaches the lever in most runs and only shortens how long the robot presses on it; sweep (`simulator/test-results/route-fix/push28-sweep.txt`) matches the 30 cm files within a few runs. Earlier layout attempts are in `test-results/backups/`. Student notes: `gyro-mission6-7-11_routefix_creep_push28.md` and `gyro-mission6-7-11_routefix_push28.md` (written 2026-10-24 at the user's request). Not robot-tested.
+- **Biggest remaining unknowns**: the real slide and the real body offset. Both are measurable in minutes (see Next step). If the body's middle sits 15 mm or more ahead of the axle, the creep version gets worse at higher overshoot (26/22/17/12/6/0). The new files also start turns without the old 0.2 s pause, which might change the slide. Neither version has been on the mat.
+
 **Current work: `gyro-mission6-7-11.llsp3`** (slot 19, student notes in `gyro-mission6-7-11.md`). It is the gyro mission (`Harrison_Lucas_Kai_leafcutter_gyro.llsp3`, unchanged) plus fixes, with the same route and the same typed-in numbers:
 
 - **Safety timers** in `turn` and `straight`: each stops when done OR when a time limit runs out. This fixes the freeze in the team video: the robot bumped Mission 11, could not finish `straight 15`, and waited forever.
 - `turn 0` / `straight 0` / speed 0 do nothing (no dividing by 0). `turn` takes its direction from `degrees`, never by dividing by `error`.
 - Yaw is reset once at the program start. Each `turn`/`straight` first does `set heading to yaw angle`. This does the same as the old per-block yaw reset, without the 0.2 s waits.
-- **Heading lock across turns was tried and dropped (2026-10-21).** The video shows real turns going about 5° too far, and the team's numbers were tuned with that. Correcting it moved the leafcutter push about 12 cm and the Mission 11 bump about 9 cm (simulated). The user chose to keep the video route ("option A"). Do not re-add the lock without re-tuning on the mat.
+- **Comments fixed 2026-10-23 (user approved), both gyro-mission6-7-11 and turn-test rebuilt:** no comment claims which wheel motor B drives (not checked on the robot); the `set error` comment says never to change 540, 360 or 180; turn-test now has the full WORDS TO KNOW (heading, error, timer, mod). Blocks unchanged (compared with the previous build), 55 simulator tests pass, both reopened in SPIKE with every comment matching and no page errors. Previous builds kept in the session scratchpad only.
+- **Heading lock across turns was tried and dropped (2026-10-21).** The video shows real turns going about 5° too far, and the team's numbers were tuned with that. Correcting it moved the leafcutter push about 12 cm and the Mission 11 bump about 9 cm (simulated). The user chose to keep the video route ("option A"). Do not re-add the lock without re-tuning on the mat. (2026-10-23: frame measurements suggest real turns land closer, about 0-4° long, so the 5° figure is doubtful; keeping the old turn behaviour still stands.)
 
 | Check | Result | By |
 |---|---|---|
@@ -29,7 +42,11 @@ Read this first in a new session. Details are in sections 4 and 14.
 | Simulator: robot pinned at Mission 11 still backs up and gets home | ✅ | assistant |
 | **Real robot on the mat** | ❓ not tested | — |
 
-**Next step (needs the user, the robot and approval):** download to slot 19, start from the same spot as the video, run 5 times, and fill in the table in `gyro-mission6-7-11.md`. Watch mainly whether it backs up after the Mission 11 bump.
+**Turn creep investigation (2026-10-23):** see `docs/turn-creep-investigation.md`. Leading explanation (medium confidence, simulated and video evidence, not proven): during `turn 67` the robot's front reaches the green-and-black model by the river (the simulator's D2 dock outline) in about 4 of 10 plausible runs, and a front contact pushes it backward. `turn 36` passes within millimetres of the same model in about 85 % of runs. The code itself never commands wheel roll during a turn (regression test). **The exact next physical test** is the A/B contact test in that doc, run with gyro-mission6-7-11 in slot 19 (same route): 6 runs with the model and 6 with it lifted off, filmed from above, also checking that step 10 hits the back of Mission 11 and marking where the bump ends. The user prefers not to use the old code (2026-10-23): the original stays in slot 0, unchanged and unused. Exception the user confirmed: turn-test keeps its exact copy of the old turn as a measuring stick.
+
+**Next step (needs the user, the robot and approval; updated 2026-10-23):** (1) Ruler, no motion: back of the robot to the centre of the wheel axle (body offset = 92 mm minus that) and wheel-centre to wheel-centre (track width). (2) `turn-test.llsp3` **on the mat** (slot 19) with tape at the 4 corners and a phone filming from above: overshoot from the hub numbers, slide from how far the robot ends up from its tape (`turn-test.md`). (3) Pick the route fix: slide 2 cm or more, `gyro-mission6-7-11_routefix_creep`; less, `gyro-mission6-7-11_routefix`. With a measured offset, re-run `node tools/mission6_7_11_sweep.js --offset=<mm> --creep=<slide cm × 10> <both files>` first. (4) Run the chosen file 5 times from the video start and fill in its `.md` table. The older plan (A/B contact test, then turn-test, then gyro-mission6-7-11) is superseded: the video now answers the contact question for `turn 67` (frames show the jam), and `turn 85` shows a slide without contact.
+
+**Review of 2026-10-23 (all Word Blocks files, docs, rules, SPIKE palette):** the original uncover turn spins at a constant 5.2% and stops when abs(yaw) > degrees (recorded replay: about 1° past). The template/gyro/6-7-11 turn starts at 8 + 0.4 × remaining, so it ends faster and can roll further. Unused blocks confirmed in the real SPIKE palette: `set movement motors to brake at stop` and `set movement acceleration to` (More Movement); try them only after the turn test. Missions (from `simulator/missions.js`): M06 10 points per leaf fragment in the nest; M07 20 when the mycelium is fully extended, No Equipment Constraint; M11 20 when the root cover is down touching the mat. Ports E/F (a colour sensor?) are not recorded.
 
 **To rebuild the mission file** (needs approval; the builder refuses to overwrite): move the old `gyro-mission6-7-11.llsp3` away, then run `python3 -I tools/build_gyro_mission6_7_11.py`. Comment text lives in `tools/mission6_7_11_comments.py`. Then check it in SPIKE:
 
@@ -41,7 +58,7 @@ node tools/spike_open_check.mjs gyro-mission6-7-11.llsp3 test-results/spike-open
 
 **Simulator:** `python3 tools/serve.py` from the project root, then open `http://localhost:8000/simulator/`. Use `serve.py`, not `python3 -m http.server`: it tells the browser not to cache, so edits show after a normal refresh. "Port 8000 is already in use" means it is already running. Opening `gyro-mission6-7-11.llsp3` places the robot at its start automatically (see section 14). Since 2026-10-22 the simulator loads the **Team robot** profile (plain moves "Team guess", turn overshoot 5°) and the table walls are on; this is on purpose, at the user's request, and differs from section 14's "start with ideal motion". "Ideal robot" is one click away in Drive Settings. The 15 model outlines (BIOGLOW Missions) are all off to start with.
 
-**Browser tools on 2026-10-21:** the Playwright MCP was configured but did not load in the desktop app, even after a restart. The Claude in Chrome extension cannot answer SPIKE's native file picker. The Playwright library script above works.
+**Browser tools:** on 2026-10-21 the Playwright MCP did not load in the desktop app; on 2026-10-23 it worked (SPIKE web app in its own profile, used to make `samples/write-sample.llsp3`). The Claude in Chrome extension cannot answer SPIKE's native file picker. The Playwright library script above works.
 
 ## 1. Instruction priority and project evidence
 
@@ -68,7 +85,7 @@ Before making new claims:
 - Save retained notes, scripts, tests, edited project copies, and screenshots inside this project directory or its subdirectories.
 - Do not use `/tmp` for anything that must be kept.
 - Never modify an original `.llsp3` file.
-- Save changes as a suffixed copy, such as `_turnfix.llsp3`, with a matching `.md` explanation.
+- Save changes as a suffixed copy, such as `_turnfix.llsp3`, with a matching `.md` explanation in `docs/` (the `.llsp3` files stay at the project root).
 - Start every new mission from a copy of `Team Template.llsp3`.
 - Preserve the team's `BA` movement-pair setting.
 - Do not swap cables.
@@ -117,6 +134,8 @@ For missing facts, use clearly labeled placeholders or ask a specific question.
 
 The following records were supplied by the user and are dated 2026-10-14 unless noted otherwise.
 
+**Layout (2026-10-24):** every note (`.md`) except this file and `README.md` (the kid-friendly front page GitHub shows, added 2026-10-24) lives in `docs/`; the `.llsp3` programs stay at the project root, the simulator in `simulator/`, scripts in `tools/`. A `.md` named in this document without a folder means `docs/<name>` (for example `gyro-mission6-7-11.md` is `docs/gyro-mission6-7-11.md`). The root also has `index.html` and `.nojekyll` for GitHub Pages.
+
 | File | Purpose and protection |
 |---|---|
 | `Harrison_Lucas_Kai_leafcutter_uncover.llsp3` | Original team project. Never modify. Main program uses `BA`. |
@@ -138,6 +157,14 @@ The following records were supplied by the user and are dated 2026-10-14 unless 
 | `.gitignore` | Added 2026-10-21. See section 26. |
 | `gyro-mission6-7-11.llsp3` / `.md` | Added 2026-10-21. Gyro mission plus safety timers; generated by `tools/build_gyro_mission6_7_11.py`. Slot 19. See "Start here". |
 | `gyro-mission6-7-11-cheat-sheet.md` | Added 2026-10-21. One-page student guide for small number tweaks (steps 1-15, symptom table, do-not-change list, test log). Keep it matched to the main program. |
+| `gyro-mission6-7-11_routefix.llsp3` / `.md` | Added 2026-10-23. 6-7-11 with `straight` 47 to 35, 32 to 29, -6 to -12: the video route for a robot that does not slide in turns. Built by `tools/build_mission6_7_11_routefix.py routefix`. Slot 19. Not robot-tested. |
+| `gyro-mission6-7-11_routefix_creep.llsp3` / `.md` | Added 2026-10-23. 6-7-11 with `straight` 47 to 40, 32 to 28 (back 6 kept): the video route for a robot that slides about 4-7 cm when a fast turn starts (what the video shows; try first). Built by `tools/build_mission6_7_11_routefix.py routefix_creep`. Slot 19. Not robot-tested. |
+| `simulator/tools/mission6_7_11_sweep.js` | Added 2026-10-23. Runs a Missions 6-7-11 program 27 times per overshoot (0-5°) with Push, the pusher and the outlines; counts D2 touches, push stall, Mission 11 bump, completely home, other touches. `--creep=N`, `--offset=N`. About 1 minute per file. |
+| `docs/route-from-video.md` / `.png` | Added 2026-10-23, updated the same day. Real robot poses from the video (13 frames) vs simulated routes; the turn-slide evidence; both route fixes with their simulated results; limits; next physical tests. |
+| `turn-test.llsp3` / `.md` | Added 2026-10-23. Team Template copy, slot 19. Turns right 90 three times with the OLD turn (copied from the original uncover project) and three times with the NEW turn (copied from gyro-mission6-7-11), and after each turn shows `round(yaw angle)` on the light matrix. Built by `tools/build_turn_test.py` (reads Team Template, uncover and gyro-mission6-7-11 read-only; refuses to overwrite). Opened in SPIKE (17 comments match); simulated (ideal motors: OLD 90, NEW 89). Not run on the robot. |
+| `samples/write-sample.llsp3` | Added 2026-10-23. Real SPIKE export made by the assistant in the SPIKE web app through the Playwright MCP (new Word Blocks project, saved through a stubbed save picker). Holds `write (round (pitch angle))` and `repeat 10`: the formats for `flipperlight_lightDisplayText` (TEXT `[3, id, [10, ...]]`), `operator_round` (NUM `[3, id, [4, ""]]`) and `control_repeat` (TIMES `[1, [6, "10"]]`), plus the `flipperlight` extension in both extension lists. Do not edit. |
+| `docs/turn-creep-investigation.md` | Added 2026-10-23. Investigation of the backward creep in `turn 67` and of turn reliability: four causes checked, Word Blocks vs simulator vs Python replay, safety-timer risks, prioritized next steps, the exact next physical test, and a plain-words summary for the team. Every finding labelled history / file / video / sim / test / robot. |
+| `simulator/tools/turn_clearance_sweep.js` | Added 2026-10-23. For every in-place turn of a program, over ±2 cm / ±2° starts and 0-5° overshoot: how often the robot body touches each model outline and which part of the body is nearest. Output saved in `simulator/test-results/turn-clearance-sweep.txt` (git-ignored folder; rerun to regenerate). |
 | `samples/format-sample.llsp3` | Real SPIKE export saved by the user on 2026-10-21. Reference for block formats (variables, timer, mod, or, if). Do not edit. |
 | `tools/build_gyro_mission6_7_11.py`, `tools/mission6_7_11_comments.py` | Builder and comment text for `gyro-mission6-7-11.llsp3`. Reads the gyro mission read-only; refuses to overwrite its output. |
 | `tools/spike_open_check.mjs` | Opens a `.llsp3` in the SPIKE web app with Playwright (read-only) and checks blocks and comments. |
@@ -751,6 +778,7 @@ Recorded behavior:
 - Watch mode redraws added or saved files.
 - Projects without executable start-event stacks are skipped.
 - `--as-written` ignores the current AB/BA reversal mapping.
+- Found 2026-10-23: it skips everything inside an `if` block, so gyro-mission6-7-11 and turn-test (My Blocks wrapped in `if`) come out with no turns. Use the browser simulator for those. Also, `python3 -I tools/test_sim_path.py` fails with ModuleNotFoundError; run it without `-I`, as above.
 
 Recorded supported behavior:
 
@@ -1144,12 +1172,12 @@ Built by the coding assistant on 2026-10-21. Simulated and browser-tested only. 
 | `.llsp3` program runner (read-only import, step by step) | Done, at the user's request ahead of C |
 | C. Editable command list, translation | Not started |
 | BIOGLOW mission data and map markers (`missions.js`) | Done 2026-10-21 for all 15 missions. Labels only: no collisions, no scoring. |
-| D. Collisions, save/load, examples | Partly done. 2026-10-22: table walls (on by default, whole body box) and 15 model/dock outlines from the wireframe (all off by default, estimates, one tick box each). Save/load, attachment footprints, body offset not started. |
-| Turn-overshoot estimate setting | Added 2026-10-21. 2026-10-22: default is now 5° through the "Team robot" profile (Drive Settings); "Ideal robot" = 0° and "Drive the cm asked". Both are estimates. Physics defaults and tests are unchanged. |
+| D. Collisions, save/load, examples | Partly done. 2026-10-22: table walls (on by default, whole body box) and 15 model/dock outlines from the wireframe (all off by default, estimates, one tick box each). Save/load, attachment footprints, body offset not started.. 2026-10-23: Push mode (models shove the robot aside instead of pausing), the front pusher footprint (from the video), and the `m0607stop` outline (where the real push stopped). |
+| Turn-overshoot estimate setting | Added 2026-10-21. 2026-10-22: default is now 5° through the "Team robot" profile (Drive Settings); "Ideal robot" = 0° and "Drive the cm asked". Both are estimates. Physics defaults and tests are unchanged. 2026-10-23: the video frames suggest about 0-4° per turn (see "Start here"), and the hub replay about 2° (about 3° in this setting). |
 
 Files: `simulator/index.html`, `styles.css`, `app.js` (UI), `physics.js` (no DOM), `llsp3.js` (ZIP reader, no DOM), `wordblocks.js` (Word Blocks interpreter, no DOM), `missions.js` (mission data, no DOM), `tools/pdf_render.swift`, `assets/`, `tests/`, `test-results/`.
 
-Run: `python3 tools/serve.py` from the project root (no-cache server, added 2026-10-21), open `http://localhost:8000/simulator/`. Tests: `node --test tests/` from `simulator/` (50 pass on 2026-10-22). Evidence logs: `simulator/test-results/milestone-b-checks.md`, `program-runner-checks.md`, `missions-checks.md`.
+Run: `python3 tools/serve.py` from the project root (no-cache server, added 2026-10-21), open `http://localhost:8000/simulator/`. Tests: `node --test tests/` from `simulator/` (61 pass on 2026-10-23). Evidence logs: `simulator/test-results/milestone-b-checks.md`, `program-runner-checks.md`, `missions-checks.md`.
 
 Official documents in `simulator/assets/` (downloaded 2026-10-21, keep unchanged; hashes in `simulator/README.md`): `bioglow-rulebook.pdf` (id 30082603 V1, 28/4/26), `bioglow-field-setup-guide.pdf`, `bioglow-challenge-updates.pdf` (updated 2026-10-14), plus the wireframe PDF. Together about 30 MB. Challenge Updates supersede the rulebook; re-download them before relying on the mission text.
 
@@ -1171,7 +1199,7 @@ Program runner:
 - Plain-move mode: "Drive the cm asked" (default) or "Team guess: 17.5 cm per wheel turn". The `straight` helper is never corrected.
 - Run program uses the robot's current hand-placed pose as the new start pose, otherwise the saved start. Robot placement: drag to move, ⟲/⟳ 90° buttons or typed heading to turn.
 - A `.llsp3` file can be dropped anywhere on the page, or opened with Choose File. Dropping only opens it; Run program starts it. Refused while a program is running.
-- Per-project start poses: `START_POSES` in `missions.js`, keyed by the manifest project name. Opening that project places the robot there and saves it as the start pose. Only `gyro-mission6-7-11` has one: (2099, 286) mm, heading 180°, measured on the first video frame against the printed launch-area edge strip (ticks every 10 cm from the bottom-right mat corner; robot sides at about 19 and 38 cm from the bottom wall, back on the mat's right edge). About ±2 cm. The earlier estimate was (2099, 265).
+- Per-project start poses: `START_POSES` in `missions.js`, keyed by the manifest project name. Opening that project places the robot there and saves it as the start pose. Three have one (2026-10-23): `gyro-mission6-7-11`, `gyro-mission6-7-11_routefix` and `gyro-mission6-7-11_routefix_creep`, all (2099, 286) mm, heading 180°, measured on the first video frame against the printed launch-area edge strip (ticks every 10 cm from the bottom-right mat corner; robot sides at about 19 and 38 cm from the bottom wall, back on the mat's right edge). About ±2 cm. The earlier estimate was (2099, 265).
 
 Left panel (reworked 2026-10-21, it had grown to 4 screens): View, Program, Run Controls, Robot Placement, Sensors and BIOGLOW Missions are open, in that order; Drive Settings, Table, Mat, Background, Grid, Movement Test and Cursor are collapsed `<details>`. Inputs in collapsed panels still work and are still locked during a run.
 
@@ -1191,17 +1219,18 @@ Gyro mission jam (2026-10-21; from the user's video, not a hub or mat test by th
 - Result: with the obstacle on, the gyro mission finishes at turn overshoot 0, 5, 8, 10, 15 and 20° and never touches the outline. About 5° per turn matches the video heading but still leaves at least about 6 cm. A body offset of up to 6 cm (script test) does not close it either. These two settings alone do **not** reproduce the jam.
 - Unmeasured candidates: real Mission 11 footprint (base plate, lever, plants stick out past the outline), body offset, real `turn 90` overshoot, and the robot's real position when block 11 starts.
 - Proposed robot test (needs the user and the robot): when it stops at Mission 11, check the hub still shows the program running, then pull it back about 3 cm. If it finishes the route, the jam is confirmed. Any timeout or route fix goes in a new approved copy, never the original.
-- Table walls and outlines (2026-10-22, simulated; corrected after an invalid first trial in which the obstacles had not been applied): with the Team robot profile and all 15 outlines ticked, the `gyro-mission6-7-11` route from its measured start **pauses at 3.69 s in `turn 67` touching the D2 outline** (by under 1 mm, robot about (1317, 482) mm); with D2 off it pauses at 5.14 s in `turn 36` on the lower Mission 10 outline. With those and 06·07 off it finishes. Closest then: top table wall 10 mm during the leafcutter push, Mission 11 77 mm (the simulated bump stops about 8 cm short; the real robot reaches it). Outlines are good to about 5 mm and the start to about 2 cm, so a D2 clip is possible and unproven, and the sim route may sit further up the table than the real one. Suggested mat check: where is the robot's corner at the end of `turn 67`? New: a closest-approach table in Run Controls. `simulator/README.md`, "Table Walls and Model Outlines".
+- Table walls and outlines (2026-10-22, simulated; corrected after an invalid first trial in which the obstacles had not been applied): with the Team robot profile and all 15 outlines ticked, the `gyro-mission6-7-11` route from its measured start **pauses at 3.69 s in `turn 67` touching the D2 outline** (by under 1 mm, robot about (1317, 482) mm); with D2 off it pauses at 5.14 s in `turn 36` on the lower Mission 10 outline. With those and 06·07 off it finishes. Closest then: top table wall 10 mm during the leafcutter push, Mission 11 77 mm, but only during `straight 47`; the simulated bump itself ends with the robot front about 11 cm short of the Mission 11 outline (robot centre about 25-30 cm from the model centre), near the leafcutter, while the real robot reaches Mission 11 (corrected 2026-10-23; see `docs/mission6-7-11-routes.png`). Outlines are good to about 5 mm and the start to about 2 cm, so a D2 clip is possible and unproven, and the sim route may sit further up the table than the real one. Suggested mat check: where is the robot's corner at the end of `turn 67`? New: a closest-approach table in Run Controls. `simulator/README.md`, "Table Walls and Model Outlines".
+- Mission 11 in that video (checked frame by frame 2026-10-23): the "middle brown model" with flowers **is Mission 11**. Its root cover is up at 22.0 s; the robot's left front reaches the back of the model at about 23.6 s; the cover is down on the mat at 24.2 s and stays down. So Mission 11 scored in that run; the only failure was the freeze afterwards (the robot touched the model before `straight 15` reached 15 cm). Frames saved locally in `test-results/mission11-window-frames.jpg` (git-ignored). The simulator ends this bump with the robot front about 11 cm short of Mission 11, so don't judge Mission 11 with the simulator yet.
 - Fix built 2026-10-21: `gyro-mission6-7-11.llsp3` (safety timers; see "Start here"). Not robot-tested.
-- Turn overshoot about 5° per turn fits the video: with that setting, the old gyro mission reaches the Mission 11 bump facing -45°, as in the video. With ideal turns the simulated route misses the leafcutter and Mission 11 by 13-26 cm (from the mission badges) and passes about 10 cm from the D2 badge, for every version including the original. Mission badge positions are inferred. Use turn overshoot 5° when comparing simulated routes with the video.
+- Turn overshoot about 5° per turn fits the video: with that setting, the old gyro mission reaches the Mission 11 bump facing -45°, as in the video. With ideal turns the simulated route misses the leafcutter and Mission 11 by 13-26 cm (from the mission badges) and passes about 10 cm from the D2 badge, for every version including the original. Mission badge positions are inferred. Use turn overshoot 5° when comparing simulated routes with the video. **Superseded 2026-10-23:** frame-by-frame measurement (`docs/route-from-video.md`) shows the headings land within about 1° of the typed turns after four turns (only `turn 20` looked about 4° long). The route differences came from a 15 cm slide in `turn 67`, not from overshoot. For video comparisons use about 1°, with Push, the pusher and the outlines.
 
 Open items:
 
 - Mission markers: Mission 10 (which habitat is which), Missions 6/7 (one shared marker) and the dock names (D2 farm, D3 city) are inferred; see `simulator/README.md`, "BIOGLOW Missions".
 - Track width needs a ruler measurement. Body size was measured 2026-10-21 (184.15 × 168.275 mm, now the simulator default); body offset is still unmeasured.
 - Mat rotation pivots on the mat centre and turns screen-clockwise; section 14 asks for the bottom-left corner. Not changed.
-- No body offset or attachment footprint yet. The Mission 11 obstacle uses the wireframe outline only.
-- Turn overshoot is now a setting (default 0°), but its value still needs a measured, approved `turn 90` mat test.
+- No body offset yet. Attachment footprint: only the front pusher (2026-10-23, from video frames: 42 mm out, 43 mm wide, 12 mm left of centre). The port C arm is not modelled.
+- Turn overshoot is a setting (Team robot preset 5°, Ideal 0°). Its real value still needs the approved `turn-test.llsp3` run (slot 19).
 - Settings (track width, start pose, drive settings) reset on page reload; no save/load yet.
 
 Next steps, in the order suggested to the user (each needs the user's go-ahead):
@@ -1215,7 +1244,7 @@ Next steps, in the order suggested to the user (each needs the user's go-ahead):
 6. Mat rotation pivot to the bottom-left corner (section 14 asks for it).
 7. Optional: a 3D view. Discussed with the user: it would not make the simulation more accurate; calibration (step 4) matters more.
 
-Resume in a new session: read "Start here" and this section, run `node --test tests/` from `simulator/` (expect 50 pass), run `python3 tools/serve.py` from the project root, open `/simulator/`, and drop `gyro-mission6-7-11.llsp3` on the page (the robot jumps to its start; expect it to finish at about 17.8 simulated seconds with the Team robot profile, 17.2 with Ideal). Evidence logs are in `simulator/test-results/*-checks.md`.
+Resume in a new session: read "Start here" and this section, run `node --test tests/` from `simulator/` (expect 61 pass), run `python3 tools/serve.py` from the project root, open `/simulator/`, and drop `gyro-mission6-7-11.llsp3` on the page (the robot jumps to its start; expect it to finish at about 17.8 simulated seconds with the Team robot profile, 17.2 with Ideal). Evidence logs are in `simulator/test-results/*-checks.md`.
 
 ## 15. Simulator validation
 
@@ -1370,6 +1399,10 @@ Do not confuse intentional reverse moves with drift:
 
 Possible explanations for earlier backward driving include cable changes or a loose AB stack. They remain hypotheses.
 
+Investigation 2026-10-23 (assistant; simulation, video and file evidence only, no robot): `docs/turn-creep-investigation.md`. Summary: (a) real backward wheel roll: the code never commands it in any turn (regression test), and the floor replay saw none. Unlikely. (b) Sliding from unequal wheels: 1 cm of creep in `turn 67` needs the wheels about 12-15 % apart. Possible, less likely. (c) Overshoot rotates rather than slides, but more overshoot means more contact. (d) Contact: the simulated `turn 67` brings the robot's front to the D2-dock outline (where the green-and-black model sits) in 71 of 180 plausible runs, if plain moves go about 17 % further than typed (1 of 180 if they go as typed). The video shows the corner right beside that model, and `turn 67` taking about 2.9 s against 0.78 s simulated. Leading explanation, medium confidence. Next: the A/B contact test in that doc.
+
+Update 2026-10-23 (video measurement, `docs/route-from-video.md`): the creep is real and large. The robot centre moved about 15 cm back during `turn 67` (9.7 s to 12.6 s), while the frames show the front-right corner pressed against the green and black model. The team's route depended on it. `gyro-mission6-7-11_routefix` and `_routefix_creep` avoid the contact. Later the same day `turn 85` also showed a 6.5 cm slide with no contact, so fast-starting turns slide too (see "Start here").
+
 ## 19. Official mission evidence
 
 Before giving mission-specific scoring or legality advice:
@@ -1480,7 +1513,7 @@ Do not equate:
 
 Keep the student explanation in:
 
-`Harrison_Lucas_Kai_leafcutter_uncover_turnfix.md`
+`docs/Harrison_Lucas_Kai_leafcutter_uncover_turnfix.md`
 
 Do not paste it into AGENTS.md as a second competing instruction document.
 
@@ -1551,9 +1584,10 @@ Set up on 2026-10-21:
 
 - Git repository at the project root, branch `main`. First commit `37990ca` (all 53 files).
 - Repo identity: `Sebastian Ang <angdajiansebastian@gmail.com>` (local config). The global git email is a work address; do not use it here.
-- Remote: `git@github-sang2925:sang2925/spikeprime.git`. The repo must stay private: file names contain students' first names, and it holds FIRST's BIOGLOW PDF.
+- Remote: `git@github-sang2925:sang2925/spikeprime.git`. **Made public by the user on 2026-10-24.** The user decided students' first names in file names are fine (no last names or other details); do not add any other student information. The repo also tracks FIRST's BIOGLOW PDFs (rulebook, field setup guide, challenge updates, wireframe, about 30 MB) and the rendered wireframe PNG the simulator needs; flagged to the user that these are FIRST's documents, now redistributed publicly. Their decision.
+- GitHub Pages (2026-10-24): `index.html` at the root redirects to `simulator/`, and `.nojekyll` turns off Jekyll. The simulator is static (no build, relative paths), so Pages serves it as is: switch Pages on in the repo's Settings, Pages, "Deploy from a branch", `main`, `/ (root)`. Expected address `https://sang2925.github.io/spikeprime/` (redirects to `/simulator/`). Pages only shows what is pushed. No `gh` CLI on this Mac; the user switches it on and pushes.
 - `github-sang2925` is a host alias in `~/.ssh/config` using `~/.ssh/id_ed25519_sang2925` (created 2026-10-21, no passphrase). Backup of the old config: `~/.ssh/config.bak-2026-10-21`. Plain `github.com` uses `id_ed25519`, which logs in as `sang2925-pnnl`.
 - Pushed: `origin/main` was at `c0ae73e` on 2026-10-21 and matched the local branch (user pushed; `ssh -T git@github-sang2925` answers "Hi sang2925!"). Whether the GitHub repo is private was not checked by the assistant; confirm in the repo settings.
-- `.gitignore`: `.DS_Store`, `__pycache__/`, `*.pyc`, `node_modules/`, `*.tmp`, `simulator/test-results/*`, and (2026-10-21) `videos/` and `test-results/`.
+- `.gitignore`: `.DS_Store`, `__pycache__/`, `*.pyc`, `node_modules/`, `*.tmp`, `simulator/test-results/*`, (2026-10-21) `videos/` and `test-results/`, and (2026-10-23) `.playwright-mcp/` (the Playwright MCP writes its logs there).
 - The user commits and pushes manually. Uncommitted at the end of 2026-10-21: the simulator changes, the gyro-mission6-7-11 files and tools, `samples/`, and AGENTS.md.
 ````

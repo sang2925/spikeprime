@@ -17,11 +17,11 @@ Every typed-in number is the same as in the gyro mission.
 
 In our video, the gyro mission bumped Mission 11, the window dropped, and then the robot **stopped forever**. It never backed up or drove home.
 
-The `straight` block drives until the left wheel has turned enough. For the bump, that's 15 times 17.6 = 264 degrees. Mission 11 stopped the robot before it got there. The wheel never reached 264, so the block kept waiting, forever.
+The `straight` block drives until wheel B has turned enough. For the bump, that's 15 times 17.6 = 264 degrees. Mission 11 stopped the robot before it got there. The wheel never reached 264, so the block kept waiting, forever.
 
 > Everyday comparison: you're told "walk 20 steps, then turn around", and a wall is in the way at step 12. A sensible person turns around anyway. Our old block kept pushing against the wall, counting.
 
-(This is our best explanation from the video. We still need to watch it happen on the mat.)
+(Frames from our video show it: at 22.0 seconds the root cover of Mission 11, the brown model with flowers, is up. The robot bumps the back of the model at about 23.6 seconds, and at 24.2 seconds the cover is down on the mat. So Mission 11 worked. The only problem was that the robot kept pushing afterwards.)
 
 ## What changed
 
@@ -74,6 +74,8 @@ When the robot is within 1 degree of heading, **or has already gone past it**. T
 ## Something we tried and did NOT keep: the heading lock
 
 We tried a "heading lock" that fixes turns that go too far. In our video, our robot's turns go about **5 degrees too far**, every time. But our numbers were tested on the mat **with** those extra degrees. The simulator showed that "fixing" them moves the leafcutter push about 12 cm and the Mission 11 bump about 9 cm. So we kept the turns working like before.
+
+**Update (2026-10-23):** a closer look at the same video shows the turns are better than we thought. The first turn (`turn 20`) went about 4 degrees too far. But after four turns, the robot pointed within about 1 degree of where the typed numbers add up to. The big surprise was a slide, not the turns: see `gyro-mission6-7-11_routefix.md`. Our `turn-test` program will measure the turns properly.
 
 > Everyday comparison: your basketball throw always pulls a little left, so you learned to aim a little right. If someone suddenly fixes your arm, you start missing.
 

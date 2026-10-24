@@ -310,3 +310,79 @@ test('closest approach: polygonGap is zero when touching, and nothing is recorde
     while (sim.status === 'running') P.stepSim(sim);
     assert.deepEqual(sim.clearance, {});
 });
+
+test('turn records: an equal and opposite spin turns the robot without moving its wheel midpoint', () => {
+    const sim = P.createSim(PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    assert.deepEqual(P.startTest(sim, 40, -40, 1), []);       // left wheel forward, right back: clockwise
+    while (sim.status === 'running') P.stepSim(sim);
+    assert.equal(sim.turns.length, 1);
+    const t = sim.turns[0];
+    const v = 0.4 * 1000 / 360 * Math.PI * 60;                  // mm/s at each wheel
+    near(t.turnedDeg, -2 * v / 120 * 180 / Math.PI, 1e-6, 'turned clockwise by 2v / track for 1 s');
+    near(t.forwardMm, 0, 1e-6, 'no forward or backward creep');
+    near(t.sideMm, 0, 1e-6, 'no sideways creep');
+    near(t.wheelForwardDeg, 0, 1e-9, 'wheels rolled forward and back equally');
+    near(t.endS - t.startS, 1, 1e-9, 'spin lasted the whole test');
+});
+
+test('turn records: unequal opposite wheels show up as creep, and driving straight is not a turn', () => {
+    const sim = P.createSim(PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    P.startTest(sim, 40, -20, 1);                                // still a spin, but on average 10% forward
+    while (sim.status === 'running') P.stepSim(sim);
+    near(sim.turns[0].wheelForwardDeg, 0.1 * 1000, 1e-6, 'average wheel roll = (40% - 20%) / 2 of 1000 deg/s for 1 s');
+    assert.ok(Math.hypot(sim.turns[0].forwardMm, sim.turns[0].sideMm) > 10, 'the wheel midpoint moved');
+    const straight = P.createSim(PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    P.startTest(straight, 50, 50, 1);
+    while (straight.status === 'running') P.stepSim(straight);
+    assert.deepEqual(straight.turns, []);
+});
+
+test('turn records: the nearest wall or ticked model during a spin, and which part of the body is closest', () => {
+    const sim = P.createSim(PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    const box = { name: 'Box', poly: [[1120, 480], [1160, 480], [1160, 520], [1120, 520]] };   // 30 mm in front of the robot's nose
+    P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150 }, { minX: 0, minY: 0, maxX: 2362.2, maxY: 1143 });
+    P.startTest(sim, 10, -10, 0.2);                              // a small spin, nowhere near touching
+    while (sim.status === 'running') P.stepSim(sim);
+    const n = sim.turns[0].nearest;
+    assert.equal(n.name, 'Box');
+    assert.match(n.part, /front/);
+    assert.ok(n.mm > 0 && n.mm <= 30.5, `gap ${n.mm}`);
+});
+
+test('push mode: driving into a model stalls the robot at its face, the run keeps going, and the push is counted', () => {
+    const sim = P.createSim(P.DEFAULT_PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    const box = { name: 'Box', poly: [[1150, 400], [1250, 400], [1250, 600], [1150, 600]] };
+    P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150 });
+    P.setContactMode(sim, 'push');
+    P.startTest(sim, 50, 50, 2);
+    while (sim.status === 'running') P.stepSim(sim);
+    assert.equal(sim.status, 'stopped');
+    assert.ok(sim.pose.x + 90 <= 1150.1 && sim.pose.x + 90 > 1145, `front stops at the face, got x ${sim.pose.x}`);
+    assert.ok(Math.abs(sim.pose.y - 500) < 0.5, 'a head-on push does not move it sideways');
+    assert.ok(sim.pushedMm > 100);
+    P.resetSim(sim, { x: 1000, y: 500, headingDeg: 0 });
+    assert.equal(sim.contactMode, 'push', 'reset keeps the contact mode');
+});
+
+test('attachments: a part sticking out of the body touches a model the box alone does not', () => {
+    const sim = P.createSim(P.DEFAULT_PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    const box = { name: 'Box', poly: [[1120, 520], [1200, 520], [1200, 600], [1120, 600]] };
+    P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150 });
+    assert.equal(P.touching(sim), '');
+    P.setObstacles(sim, [box], { lengthMm: 180, widthMm: 150, parts: [{ name: 'pusher', front: 130, back: 90, left: 40, right: 0 }] });
+    assert.equal(P.touching(sim), 'Box');
+    assert.equal(P.nearestThing(sim).part, 'pusher');
+});
+
+test('body offset: the box sits ahead of the wheels, and an in-place spin swings it around the wheel midpoint', () => {
+    const sim = P.createSim(P.DEFAULT_PROFILE, { x: 1000, y: 500, headingDeg: 0 });
+    P.setObstacles(sim, [], { lengthMm: 180, widthMm: 150, offsetMm: 30, parts: [{ name: 'p', front: 130, back: 90, left: 10, right: -10 }] });
+    const [box, part] = P.bodyPolys(sim.pose, sim.body);
+    assert.deepEqual(box.poly.map(([x, y]) => [Math.round(x), Math.round(y)]), [[1120, 575], [940, 575], [940, 425], [1120, 425]]);
+    assert.equal(Math.round(part.poly[0][0]), 1160, 'parts move with the box');
+    P.startTest(sim, 30, -30, 0.5);   // spin right in place
+    while (sim.status === 'running') P.stepSim(sim);
+    const c = P.bodyPolys(sim.pose, sim.body)[0].poly, cx = c.reduce((t, p) => t + p[0], 0) / 4, cy = c.reduce((t, p) => t + p[1], 0) / 4;
+    assert.ok(Math.abs(Math.hypot(cx - 1000, cy - 500) - 30) < 0.01, 'box centre stays 30 mm from the wheel midpoint');
+    assert.ok(Math.abs(sim.pose.x - 1000) < 1e-6 && Math.abs(sim.pose.y - 500) < 1e-6, 'wheel midpoint does not move');
+});

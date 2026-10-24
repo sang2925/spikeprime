@@ -199,11 +199,11 @@ test('stop all ends the program; later blocks do not run', () => {
 
 test('unsupported blocks are skipped with a NOTE; missing My Block definitions too', () => {
     const b = builder();
-    const odd = b.block('flipperlight_lightDisplayText', { TEXT: [1, [10, 'hi']] });
+    const odd = b.block('flippersound_playSoundUntilDone', {});   // sound is not simulated
     const call = b.block('procedures_call', {}, {}, { mutation: { proccode: 'ghost', argumentids: '[]', warp: 'false' } });
     const { sim, runner } = runProgram(b.program([odd, call, b.pair('BA'), b.move('forward', 5)]));
     assert.equal(sim.status, 'stopped');
-    assert.ok(runner.notes.some((n) => n.text === 'not simulated: flipperlight_lightDisplayText (skipped)'));
+    assert.ok(runner.notes.some((n) => n.text === 'not simulated: flippersound_playSoundUntilDone (skipped)'));
     assert.ok(runner.notes.some((n) => /ghost/.test(n.text)));
     near(sim.pose.y - START.y, 50, 2, 'later blocks still ran');
 });
@@ -293,4 +293,73 @@ test('gyro-mission6-7-11 with the team robot settings stays inside the table wal
     assert.deepEqual(P.startProgram(sim, runner), []);
     for (let n = 0; sim.status === 'running' && n < 1e7; n++) P.stepSim(sim);
     assert.equal(sim.status, 'stopped', sim.contact || sim.fault);
+});
+
+test('turn-test: 3 old turns then 3 new turns, and the hub shows how far each one went', async () => {
+    const program = W.compileProgram(await loadTarget('turn-test.llsp3'));
+    const shows = (turnOvershootDeg) => {
+        const { sim, runner } = runProgram(program, { turnOvershootDeg });
+        assert.equal(sim.status, 'stopped');
+        assert.ok(!runner.notes.some((n) => /not simulated|no definition/.test(n.text)), 'every block is simulated');
+        near(sim.pose.headingDeg - START.headingDeg, -6 * 90 - 6 * turnOvershootDeg, 7, 'six right turns of about 90');
+        return runner.notes.filter((n) => /^hub shows/.test(n.text)).map((n) => n.text.match(/"(.*)"/)[1]);
+    };
+    // ideal motors: the old turn stops just past 90, the new one stops within 1 degree before it
+    assert.deepEqual(shows(0), ['OLD', '90', '90', '90', 'NEW', '89', '89', '89']);
+    // a turn that coasts 3 degrees shows 3 more, so the hub number minus 90 is the overshoot
+    assert.deepEqual(shows(3), ['OLD', '93', '93', '93', 'NEW', '92', '92', '92']);
+});
+
+test('turn records: no turn in the team programs asks the wheels to roll forward or backward (code is not the creep)', async () => {
+    for (const [file, turns] of [['Harrison_Lucas_Kai_leafcutter_uncover.llsp3', ['turn 20', 'turn 67', 'turn 36', 'turn 85', 'turn -20', 'turn 50']],
+        ['Harrison_Lucas_Kai_leafcutter_gyro.llsp3', ['turn 20', 'turn 67', 'turn 36', 'turn 85', 'turn -20', 'turn 50']],
+        ['gyro-mission6-7-11.llsp3', ['turn 20', 'turn 67', 'turn 36', 'turn 85', 'turn -20', 'turn 50']]]) {
+        for (const turnOvershootDeg of [0, 5]) {
+            const { sim } = runProgram(W.compileProgram(await loadTarget(file)), { turnOvershootDeg });
+            assert.deepEqual(sim.turns.map((t) => t.block), turns, file);
+            for (const t of sim.turns) {
+                assert.ok(Math.abs(t.wheelForwardDeg) < 0.5, `${file} ${t.block}: wheels rolled ${t.wheelForwardDeg} deg on average`);
+                assert.ok(Math.hypot(t.forwardMm, t.sideMm) < 0.5, `${file} ${t.block}: midpoint moved`);
+            }
+        }
+    }
+});
+
+/** One run per overshoot from the video start, judged like tools/mission6_7_11_sweep.js (Push, pusher, model outlines) */
+async function routeFixCheck(file, overshoots, turnCreepMm) {
+    const { runOnce, START } = require('../tools/mission6_7_11_sweep.js');
+    const program = W.compileProgram(await loadTarget(file));
+    for (const over of overshoots) {
+        const r = runOnce(program, { x: START.x, y: START.y, headingDeg: START.heading }, over, 0, turnCreepMm);
+        assert.equal(r.status, 'stopped', `overshoot ${over}`);
+        assert.ok(r.stall, `overshoot ${over}: the push stalls on the leafcutter stop`);
+        assert.ok(r.bumped, `overshoot ${over}: the bump touches Mission 11`);
+        assert.deepEqual(r.other, [], `overshoot ${over}: no other model touched`);
+        assert.ok(r.minD2 > 20, `overshoot ${over}: stays clear of D2 (got ${r.minD2} mm)`);
+        assert.ok(r.home, `overshoot ${over}: whole body back in the home area`);
+    }
+}
+
+test('gyro-mission6-7-11_routefix (robot that does not slide): clear of D2, stalls on the leafcutter, bumps Mission 11, gets home (simulated)', async () => {
+    await routeFixCheck('gyro-mission6-7-11_routefix.llsp3', [0, 1, 2], 0);
+});
+
+test('gyro-mission6-7-11_routefix_creep (robot that slides 6 cm in fast turns): same checks with the turn-creep setting at 60 mm (simulated)', async () => {
+    await routeFixCheck('gyro-mission6-7-11_routefix_creep.llsp3', [1, 2], 60);
+});
+
+
+test('turn creep setting: in-place turns start by sliding straight back, more for faster starts; straights unchanged', async () => {
+    const program = W.compileProgram(await loadTarget('gyro-mission6-7-11_routefix.llsp3'));
+    const plain = runProgram(program);
+    const crept = runProgram(program, { turnCreepMm: 60 });
+    const at = (r, i) => r.starts.find((s) => s.i === i).pose;
+    const slide = (r, i) => Math.hypot(at(r, i + 1).x - at(r, i).x, at(r, i + 1).y - at(r, i).y);   // movement during block i
+    // block 6 is 'turn 20' (starts at 8 + 0.4 x 20 = 16%), block 8 'turn 67' (34.8%): 60 x 1/27 = 2 mm, 60 x 19.8/27 = 44 mm
+    near(slide(plain, 6), 0, 0.5, 'no creep without the setting');
+    near(slide(crept, 6), 60 * 1 / 27, 1, 'creep in turn 20');
+    near(slide(crept, 8), 60 * 19.8 / 27, 2, 'creep in turn 67');
+    near(slide(crept, 7), slide(plain, 7), 1, 'straights drive the same distance');
+    near(at(crept, 9).headingDeg, at(plain, 9).headingDeg, 0.5, 'creep does not turn the robot');
+    assert.ok(crept.runner.notes.some((n) => /turn creep/.test(n.text || n)));
 });

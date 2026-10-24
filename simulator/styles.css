@@ -1,5 +1,12 @@
 /* SPIKE Prime Browser Simulator - Styles */
 
+:root {
+    --button: #c8304b;          /* white text 5.3:1 */
+    --button-hover: #a92640;    /* darker on hover, so contrast goes up, not down */
+    --button-active: #8f1f36;
+    --focus: #feca57;           /* same yellow as the path; 10:1 on the panel */
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -34,7 +41,7 @@ header h1 {
 
 .subtitle {
     font-size: 0.9em;
-    color: #a0a0a0;
+    color: #c4c8d4;
 }
 
 .warning {
@@ -47,6 +54,17 @@ header h1 {
     color: #87ceeb;
     font-size: 0.85em;
     font-style: italic;
+    text-wrap: pretty;   /* no single word left alone on the last line */
+}
+
+/* Read by screen readers, not shown */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .info {
@@ -143,7 +161,7 @@ main {
 
 button {
     padding: 8px 16px;
-    background: #e94560;
+    background: var(--button);
     color: white;
     border: none;
     border-radius: 4px;
@@ -152,12 +170,22 @@ button {
     transition: background 0.2s;
 }
 
-button:hover {
-    background: #ff6b6b;
+button:hover:not(:disabled) {
+    background: var(--button-hover);
 }
 
-button:active {
-    background: #c13651;
+button:active:not(:disabled) {
+    background: var(--button-active);
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
 }
 
 table {
@@ -273,7 +301,7 @@ footer {
     padding: 8px 20px;
     border-top: 2px solid #0f3460;
     font-size: 0.8em;
-    color: #808080;
+    color: #b0b4c0;
 }
 
 /* Scrollbar styling */
@@ -292,4 +320,34 @@ footer {
 
 #controls::-webkit-scrollbar-thumb:hover {
     background: #e94560;
+}
+
+/* Narrow screens (tablets, phones): the board on top, the controls below it, and the page scrolls */
+@media (max-width: 800px) {
+    body, #app {
+        height: auto;
+        overflow: visible;
+    }
+
+    main {
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    #canvas-container {
+        order: -1;
+        flex: none;
+        height: clamp(240px, 62vw, 60vh);   /* the table is about 2:1, so taller only leaves empty space */
+    }
+
+    #controls {
+        width: 100%;
+        overflow: visible;
+        border-right: none;
+        border-top: 2px solid #0f3460;
+    }
+
+    .button-row {
+        flex-wrap: wrap;
+    }
 }

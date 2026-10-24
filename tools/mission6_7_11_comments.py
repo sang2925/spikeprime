@@ -5,7 +5,7 @@ TEXT = {
 
 What the robot does: leaves base, drives up past the brown model, slowly pushes the leafcutter model (Missions 6 and 7), then gently bumps Mission 11 so the window drops. Then it backs up, turns, and hurries home.
 
-Set movement motors to B+A: B is the left wheel, A is the right wheel. A+B makes our robot drive backwards.
+Set movement motors to B+A. With B+A our robot drives forward. With A+B it drives backwards, so never swap them.
 
 WHY ARE THE NUMBERS BIGGER THAN IN THE OLD VERSION?
 The old 'move' block thinks a wheel moves the robot 17.5 cm each time it spins once. Our wheels really move it about 20.5 cm. So the old 'move 30 cm' really drove about 35 cm! 'straight' knows the real size of our wheels, so we type the real distance: 35.
@@ -75,7 +75,9 @@ The answer is always between -180 and 180. Plus = turn right, minus = turn left.
 Example: heading 87, yaw 80. 87 - 80 + 540 = 547. 547 mod 360 = 187. 187 - 180 = 7. Turn 7 more degrees right.
 Why 540 and mod? Yaw jumps from 180 to -180 when you pass the back. mod fixes that jump, like a clock going from 12 back to 1.
 
-We work out error once, before the loop, and again at the end of every loop pass. Then every block in one pass uses the same number.""",
+We work out error once, before the loop, and again at the end of every loop pass. Then every block in one pass uses the same number.
+
+NEVER CHANGE 540, 360 OR 180. They only make the math work. To change how the robot turns, use the cheat sheet.""",
 
     'cTurn_repeat': """REPEAT UNTIL (close enough or gone past) OR (time is up)
 
@@ -122,7 +124,7 @@ So straight 0, or speed 0, just skips everything.""",
     'cStraight_zero': """SET HEADING TO YAW: drive in the direction we point now.
 
 B SET RELATIVE POSITION TO 0
-Motor B turns the left wheel. Its "relative position" counts how far the wheel has turned, in degrees. One full spin of the wheel = 360.
+Motor B turns one of our two drive wheels. Its "relative position" counts how far that wheel has turned, in degrees. One full spin of the wheel = 360.
 Setting it to 0 starts the count fresh, like resetting a stopwatch.
 
 Reset timer: starts the hub's stopwatch for this drive's time limit.""",

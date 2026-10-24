@@ -84,16 +84,37 @@
             bounds: null,      // { minX, minY, maxX, maxY } table interior, mm; null = no walls
             body: null,        // { lengthMm, widthMm } centred on the wheel midpoint; needed when obstacles or bounds are set
             contact: '',       // which obstacle stopped the robot
+            contactMode: 'pause',   // 'pause' = a ticked model stops the run; 'push' = it pushes the robot aside (the robot slides)
+            pushedMm: 0,       // how far models have pushed the robot this run (push mode)
             clearance: {},     // closest approach so far this run: { name: { mm, timeS, pose, step } } (walls and ticked obstacles)
+            turns: [],         // finished in-place spins this run (see trackSpin)
+            spin: null,        // the spin in progress
         };
     }
 
     /** Corners of the robot body (centred on the wheel midpoint; no body offset yet) */
     function bodyCorners(pose, body) {
         const h = pose.headingDeg * Math.PI / 180, c = Math.cos(h), s = Math.sin(h);
-        const l = body.lengthMm / 2, w = body.widthMm / 2;
-        return [[l, w], [-l, w], [-l, -w], [l, -w]].map(([f, side]) => [pose.x + f * c - side * s, pose.y + f * s + side * c]);
+        const l = body.lengthMm / 2, w = body.widthMm / 2, off = body.offsetMm || 0;
+        return [[l, w], [-l, w], [-l, -w], [l, -w]].map(([f, side]) => [pose.x + (f + off) * c - side * s, pose.y + (f + off) * s + side * c]);
     }
+
+    /**
+     * Every convex piece of the robot's footprint: the body box ('box'), plus any attachment rectangles in
+     * body.parts = [{ name, front, back, left, right }] (mm from the centre of the body box: front/back along the
+     * heading, left/right sideways, left positive). body.offsetMm (default 0, not measured yet) is how far the box
+     * centre sits ahead of the wheel midpoint (minus = behind); the box and its parts move together.
+     * Returns [{ name, poly }].
+     */
+    function bodyPolys(pose, body) {
+        const h = pose.headingDeg * Math.PI / 180, c = Math.cos(h), s = Math.sin(h);
+        const off = body.offsetMm || 0;
+        const at = (f, side) => [pose.x + (f + off) * c - side * s, pose.y + (f + off) * s + side * c];
+        const out = [{ name: 'box', poly: bodyCorners(pose, body) }];
+        for (const p of body.parts || []) out.push({ name: p.name, poly: [at(p.front, p.left), at(p.back, p.left), at(p.back, p.right), at(p.front, p.right)] });
+        return out;
+    }
+    const allPoints = (polys) => polys.flatMap((p) => p.poly);
 
     /** Separating-axis test for two convex polygons (touching counts as overlap) */
     function convexOverlap(a, b) {
@@ -112,17 +133,75 @@
     /** Name of the wall or obstacle the robot body touches, or ''. A body corner exactly on a wall is still inside. */
     function touching(sim) {
         if (!sim.body || (!sim.obstacles.length && !sim.bounds)) return '';
-        const robot = bodyCorners(sim.pose, sim.body);
+        const polys = bodyPolys(sim.pose, sim.body);
         const b = sim.bounds;
         if (b) {
-            const xs = robot.map((c) => c[0]), ys = robot.map((c) => c[1]);
+            const pts = allPoints(polys), xs = pts.map((c) => c[0]), ys = pts.map((c) => c[1]);
             if (Math.min(...xs) < b.minX) return 'the left table wall';
             if (Math.max(...xs) > b.maxX) return 'the right table wall';
             if (Math.min(...ys) < b.minY) return 'the bottom table wall';
             if (Math.max(...ys) > b.maxY) return 'the top table wall';
         }
-        const hit = sim.obstacles.find((o) => convexOverlap(robot, o.poly));
+        const hit = sim.obstacles.find((o) => polys.some((r) => convexOverlap(r.poly, o.poly)));
         return hit ? hit.name : '';
+    }
+
+    /** Smallest push that separates convex polygon a from b (separating-axis test), as { dx, dy } moving a; null if apart */
+    function separation(a, b) {
+        let best = null;
+        const centre = (p) => [p.reduce((t, q) => t + q[0], 0) / p.length, p.reduce((t, q) => t + q[1], 0) / p.length];
+        const [ca, cb] = [centre(a), centre(b)];
+        for (const poly of [a, b]) {
+            for (let i = 0; i < poly.length; i++) {
+                const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length];
+                let nx = y1 - y2, ny = x2 - x1;
+                const len = Math.hypot(nx, ny);
+                if (!len) continue;
+                nx /= len; ny /= len;
+                const pa = a.map(([x, y]) => x * nx + y * ny), pb = b.map(([x, y]) => x * nx + y * ny);
+                const overlap = Math.min(Math.max(...pa), Math.max(...pb)) - Math.max(Math.min(...pa), Math.min(...pb));
+                if (overlap < 0) return null;
+                if (!best || overlap < best.depth) {
+                    const sign = (ca[0] - cb[0]) * nx + (ca[1] - cb[1]) * ny < 0 ? -1 : 1;
+                    best = { depth: overlap, dx: sign * nx, dy: sign * ny };
+                }
+            }
+        }
+        return best && { dx: best.dx * (best.depth + 0.01), dy: best.dy * (best.depth + 0.01) };
+    }
+
+    /**
+     * Push mode: move the robot out of every ticked model it overlaps (the model is fixed and does not move).
+     * Rubber tyres grip sideways, so the robot is moved along its own forward/back line: the wheels slip, the gyro
+     * still turns the robot. While it spins, that is the same as turning about a point on the wheel line, which is
+     * how the team video's 15 cm backward creep in 'turn 67' looks. When the model presses on the robot's side (the
+     * forward/back line cannot clear it), the robot is shoved sideways instead.
+     * ponytail: no friction at the contact and no stalled encoders; real stalls stop the wheel count, here it keeps
+     * counting. Returns false if it could not get clear.
+     */
+    function pushClear(sim) {
+        for (let n = 0; n < 8; n++) {
+            let moved = false;
+            const h = sim.pose.headingDeg * Math.PI / 180, fx = Math.cos(h), fy = Math.sin(h);
+            for (const o of sim.obstacles) {
+                for (const r of bodyPolys(sim.pose, sim.body)) {
+                    const sep = separation(r.poly, o.poly);
+                    if (!sep) continue;
+                    const depth = Math.hypot(sep.dx, sep.dy), along = (sep.dx * fx + sep.dy * fy) / depth;
+                    if (Math.abs(along) > 0.3) { sep.dx = fx * depth / along; sep.dy = fy * depth / along; }
+                    sim.pose.x += sep.dx;
+                    sim.pose.y += sep.dy;
+                    sim.pushedMm += Math.hypot(sep.dx, sep.dy);
+                    moved = true;
+                }
+            }
+            if (!moved) return true;
+        }
+        return !touching(sim);
+    }
+
+    function setContactMode(sim, mode) {
+        sim.contactMode = mode === 'push' ? 'push' : 'pause';
     }
 
     /** bounds (optional): the table interior rectangle { minX, minY, maxX, maxY } in mm; null/omitted = no walls */
@@ -154,7 +233,7 @@
     /** Remember the smallest gap to each wall and ticked obstacle. Called after every accepted step. */
     function updateClearance(sim) {
         if (!sim.body || (!sim.obstacles.length && !sim.bounds)) return;
-        const robot = bodyCorners(sim.pose, sim.body);
+        const polys = bodyPolys(sim.pose, sim.body), robot = allPoints(polys);
         const note = (name, mm) => {
             const old = sim.clearance[name];
             if (old && old.mm <= mm) return;
@@ -168,13 +247,76 @@
             note('the bottom table wall', Math.min(...ys) - b.minY);
             note('the top table wall', b.maxY - Math.max(...ys));
         }
-        for (const o of sim.obstacles) note(o.name, polygonGap(robot, o.poly));
+        for (const o of sim.obstacles) note(o.name, Math.min(...polys.map((r) => polygonGap(r.poly, o.poly))));
+    }
+
+    const CORNERS = ['front-left corner', 'back-left corner', 'back-right corner', 'front-right corner'];   // bodyCorners order
+    const SIDES = ['left side', 'back', 'right side', 'front'];   // edge i runs from corner i to corner i + 1
+
+    /** The wall or ticked obstacle nearest the body now: { name, mm, part } (part = which corner or side), or null */
+    function nearestThing(sim) {
+        if (!sim.body || (!sim.obstacles.length && !sim.bounds)) return null;
+        let best = null;
+        const consider = (name, mm, part) => { if (!best || mm < best.mm) best = { name, mm, part }; };
+        for (const { name: piece, poly: robot } of bodyPolys(sim.pose, sim.body)) {
+            const corner = (i) => (piece === 'box' ? CORNERS[i] : piece), side = (j) => (piece === 'box' ? SIDES[j] : piece);
+            const b = sim.bounds;
+            if (b) {
+                robot.forEach(([x, y], i) => {
+                    consider('the left table wall', x - b.minX, corner(i));
+                    consider('the right table wall', b.maxX - x, corner(i));
+                    consider('the bottom table wall', y - b.minY, corner(i));
+                    consider('the top table wall', b.maxY - y, corner(i));
+                });
+            }
+            for (const o of sim.obstacles) {
+                robot.forEach(([x, y], i) => o.poly.forEach((q, j) => consider(o.name, pointSegmentDist(x, y, q, o.poly[(j + 1) % o.poly.length]), corner(i))));
+                o.poly.forEach(([x, y]) => robot.forEach((r, j) => consider(o.name, pointSegmentDist(x, y, r, robot[(j + 1) % robot.length]), side(j))));
+            }
+        }
+        return best;
+    }
+
+    /**
+     * In-place spins (wheels turning opposite ways), one record each in sim.turns: how far the robot turned, how far
+     * its wheel midpoint moved (0 when the wheels are equal and opposite), how far the wheels rolled on average, and
+     * the nearest wall or ticked model during the spin. Called after every accepted step with the values from before it.
+     */
+    function trackSpin(sim, leftPct, rightPct, before, encL0, encR0, t0) {
+        const spinning = leftPct * rightPct < 0;
+        if (spinning && !sim.spin) {
+            sim.spin = { block: activeBlockLabel(sim), startS: t0, pose0: before, encL0, encR0, nearest: null };
+        }
+        if (!sim.spin) return;
+        if (!spinning) {
+            closeSpin(sim, before, encL0, encR0, t0);   // the spin ended before this step
+            return;
+        }
+        const near = nearestThing(sim);
+        if (near && (!sim.spin.nearest || near.mm < sim.spin.nearest.mm)) {
+            sim.spin.nearest = { ...near, timeS: sim.timeS, pose: { ...sim.pose } };
+        }
+    }
+
+    function closeSpin(sim, pose1, encL1, encR1, t1) {
+        const s = sim.spin;
+        sim.spin = null;
+        const h = s.pose0.headingDeg * Math.PI / 180, dx = pose1.x - s.pose0.x, dy = pose1.y - s.pose0.y;
+        const p = sim.profile;
+        sim.turns.push({
+            block: s.block, startS: s.startS, endS: t1,
+            turnedDeg: pose1.headingDeg - s.pose0.headingDeg,              // + = counterclockwise (left), like heading
+            forwardMm: dx * Math.cos(h) + dy * Math.sin(h),               // along the heading at the start: - = backward
+            sideMm: -dx * Math.sin(h) + dy * Math.cos(h),                 // + = to the robot's left
+            wheelForwardDeg: ((encL1 - s.encL0) * p.leftMotorSign + (encR1 - s.encR0) * p.rightMotorSign) / 2,   // motor deg, - = rolled back
+            nearest: s.nearest,
+        });
     }
 
     function setObstacles(sim, obstacles, body, bounds) {
         if (isActive(sim)) return ['Obstacles cannot change during a run.'];
         sim.obstacles = obstacles.map((o) => ({ name: o.name, poly: o.poly.map(([x, y]) => [x, y]) }));
-        sim.body = body ? { lengthMm: body.lengthMm, widthMm: body.widthMm } : null;
+        sim.body = body ? { lengthMm: body.lengthMm, widthMm: body.widthMm, offsetMm: body.offsetMm || 0, parts: (body.parts || []).map((p) => ({ ...p })) } : null;
         sim.bounds = bounds ? { minX: bounds.minX, minY: bounds.minY, maxX: bounds.maxX, maxY: bounds.maxY } : null;
         sim.contact = '';
         sim.clearance = {};
@@ -254,8 +396,11 @@
     function advance(sim, leftPct, rightPct, dt, forcePath) {
         const p = sim.profile;
         const safe = { ...sim.pose };
-        integrate(sim.pose, wheelSpeedMmPerS(p, leftPct), wheelSpeedMmPerS(p, rightPct), p.trackWidthMm, dt);
-        const hit = touching(sim);
+        const encL0 = sim.encLeftDeg, encR0 = sim.encRightDeg, t0 = sim.timeS;
+        const vL = wheelSpeedMmPerS(p, leftPct), vR = wheelSpeedMmPerS(p, rightPct);
+        integrate(sim.pose, vL, vR, p.trackWidthMm, dt);
+        let hit = touching(sim);
+        if (hit && sim.contactMode === 'push' && !/table wall/.test(hit) && pushClear(sim)) hit = '';   // the model shoves the robot aside
         if (hit) {
             Object.assign(sim.pose, safe);
             sim.contact = `Robot body touched ${hit} at ${sim.timeS.toFixed(2)} s, so the run paused. Wheels were at ${leftPct.toFixed(0)}% / ${rightPct.toFixed(0)}%. Resume tries the same step again.`;
@@ -266,6 +411,7 @@
         sim.encRightDeg += motorDegPerS(p, rightPct) * dt * p.rightMotorSign;
         sim.timeS += dt;
         updateClearance(sim);
+        trackSpin(sim, leftPct, rightPct, safe, encL0, encR0, t0);
         if (![sim.pose.x, sim.pose.y, sim.pose.headingDeg].every(Number.isFinite)) {
             fail(sim, ['Physics produced an invalid pose.']);
             return false;
@@ -286,6 +432,7 @@
         if (last) {
             sim.test = null;
             sim.status = 'stopped';
+            if (sim.spin) closeSpin(sim, { ...sim.pose }, sim.encLeftDeg, sim.encRightDeg, sim.timeS);
         }
         return true;
     }
@@ -301,6 +448,7 @@
         if (!running) {
             sim.program = null;    // program end stops the motors
             sim.status = 'stopped';
+            if (sim.spin) closeSpin(sim, { ...sim.pose }, sim.encLeftDeg, sim.encRightDeg, sim.timeS);
             recordPath(sim, true);
             return true;
         }
@@ -372,7 +520,7 @@
     /** Stop, put the robot at the start pose, clear timer, encoders, gyro reference, path and fault */
     function resetSim(sim, startPose) {
         const fresh = createSim(sim.profile, startPose);
-        Object.assign(sim, fresh, { obstacles: sim.obstacles, body: sim.body, bounds: sim.bounds });
+        Object.assign(sim, fresh, { obstacles: sim.obstacles, body: sim.body, bounds: sim.bounds, contactMode: sim.contactMode });
     }
 
     /** Robot placed by hand while stopped: move the pose and break the path line */
@@ -402,7 +550,7 @@
         TIMESTEP_S, MAX_TEST_DURATION_S, MAX_PROGRAM_S, MAX_PLAYBACK, DEFAULT_PROFILE,
         validateProfile, validateTest, motorDegPerS, wheelSpeedMmPerS, normalizeHeading,
         createSim, isActive, startTest, startProgram, stepSim, runFrame, pause, resume, stepOnce, stop,
-        resetGyro, gyroDeg, resetSim, placeRobot, setProfile, clearPath, setObstacles, touching, polygonGap,
+        resetGyro, gyroDeg, resetSim, placeRobot, setProfile, clearPath, setObstacles, setContactMode, touching, polygonGap, nearestThing, bodyPolys,
     };
 
     if (typeof module !== 'undefined' && module.exports) module.exports = SimPhysics;

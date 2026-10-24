@@ -16,4 +16,7 @@ simulator/test-results/*
 videos/
 
 # Local SPIKE check output and its saved Chrome profile (tools/spike_open_check.mjs)
-test-results/
+/test-results/
+
+# Playwright MCP logs, snapshots and screenshots
+.playwright-mcp/

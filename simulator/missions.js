@@ -228,6 +228,10 @@
         { key: 'm04', name: 'Mission 04 model (estimate)', missions: [4],
             corners: [[381, 715], [427, 715], [440, 739], [440, 910], [270, 910], [246, 897], [246, 850], [276, 778], [309, 745]] },
         { key: 'm05', name: 'Mission 05 model (estimate)', missions: [5], corners: [[734, 643], [794, 643], [794, 774], [781, 774], [734, 726]] },
+        // Not a model outline: where the real robot's pusher stopped in the team video (19.4 s), about ±3 cm. The
+        // leafcutter lever stops moving there, so the real push went about 24 of its 30 cm.
+        { key: 'm0607stop', name: 'Leafcutter lever: where the real push stopped (from the video, estimate)', missions: [6, 7],
+            corners: [[2269, 786], [2244, 823], [2320, 872], [2343, 833]] },
         { key: 'm0809', name: 'Missions 08 and 09 model, body only (estimate)', missions: [8, 9], corners: rect(947, 680, 1098, 800) },
         { key: 'm10a', name: 'Mission 10 model, upper (estimate)', missions: [10],
             corners: [[1272, 740], [1294, 736], [1307, 758], [1281, 805], [1252, 785], [1250, 760]] },
@@ -249,6 +253,14 @@
         // bottom-right mat corner): robot sides at about 19 and 38 cm from the bottom wall, back on the mat's right edge.
         'gyro-mission6-7-11': { x: 2099, y: 286, heading: 180,
             source: 'measured from the team video gyro_run1.MOV against the launch-area edge marks, about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix': { x: 2099, y: 286, heading: 180,
+            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix_creep': { x: 2099, y: 286, heading: 180,
+            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix_creep_push28': { x: 2099, y: 286, heading: 180,
+            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix_push28': { x: 2099, y: 286, heading: 180,
+            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
     };
 
     const BioglowMissions = { IMAGE, MISSIONS, MARKERS, OTHER_SCORING, OBSTACLES, START_POSES, imagePxToMatMm, markersFor };

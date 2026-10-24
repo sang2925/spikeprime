@@ -142,6 +142,7 @@
             case 'flippermotor_motorSetSpeed': return `set ${d('PORT')} speed to ${d('SPEED')}%`;
             case 'flippermotor_motorTurnForDirection': return `${d('PORT')} run ${d('DIRECTION')} for ${d('VALUE')} ${unit()}`;
             case 'control_wait': return `wait ${d('DURATION')} seconds`;
+            case 'flipperlight_lightDisplayText': return `write ${d('TEXT')}`;
             case 'control_wait_until': return `wait until ${d('CONDITION')}`;
             case 'control_repeat': return `repeat ${d('TIMES')}`;
             case 'control_repeat_until': return `repeat until ${d('CONDITION')}`;
@@ -166,6 +167,10 @@
      * options.onTopBlock(threadIndex, itemIndex): called when a main-stack block starts.
      * options.turnOvershootDeg: estimate, default 0. When "stop moving" ends an in-place spin (wheels turning opposite
      *   ways), the robot keeps spinning this many more degrees before it stops.
+     * options.turnCreepMm: hypothesis, default 0. When an in-place spin starts, the robot first slides straight back:
+     *   this many mm for a spin that starts at 42% wheel speed, scaled by (start speed - 15%) / 27%, none at 15% or less.
+     *   Team video: `turn 20` (starts at 16%) about 0, `turn 36` (22%) 0-4 cm, `turn 85` (42%) about 6 cm, and
+     *   `turn 67` (35%) 15 cm while jammed against a model.
      */
     function createRunner(program, options = {}) {
         const blocks = program.blocks;
@@ -178,6 +183,7 @@
             threads: [],
             plainMoveMode: options.plainMoveMode === 'app-guess' ? 'app-guess' : 'commanded',
             turnOvershootDeg: Number.isFinite(options.turnOvershootDeg) && options.turnOvershootDeg > 0 ? options.turnOvershootDeg : 0,
+            turnCreepMm: Number.isFinite(options.turnCreepMm) && options.turnCreepMm > 0 ? options.turnCreepMm : 0,
             onTopBlock: options.onTopBlock || null,
             tick, wordYaw, portPosition,
         };
@@ -324,9 +330,13 @@
                     yield* overshootSpin();
                     setDrive(0, 0);
                     return;
-                case 'flippermoremove_startDualSpeed':
-                    setDrive(clampSpeed(num(b, 'LEFT', ctx)), clampSpeed(num(b, 'RIGHT', ctx)));
+                case 'flippermoremove_startDualSpeed': {
+                    const left = clampSpeed(num(b, 'LEFT', ctx)), right = clampSpeed(num(b, 'RIGHT', ctx));
+                    const spin = Math.abs(left + right) < 0.2 * Math.abs(left - right);   // opposite wheels, not a steering correction
+                    if (spin && !(runner.leftPct * runner.rightPct < 0)) yield* creepBack(Math.abs(left));
+                    setDrive(left, right);
                     return;
+                }
                 case 'flippersensors_resetYaw':
                     runner.yawRefDeg = sim.pose.headingDeg;
                     return;
@@ -404,6 +414,11 @@
                 case 'flippermotor_motorTurnForDirection':
                     yield* motorTurn(b, ctx);
                     return;
+                case 'flipperlight_lightDisplayText': {    // the hub's light matrix: shown as a note, takes no time
+                    const v = evalInput(inp.TEXT, ctx);
+                    runner.notes.push({ timeS: sim.timeS - runner.startTimeS, text: `hub shows "${typeof v === 'number' ? Number(v.toFixed(1)) : v}"` });   // every time, not once like warnings
+                    return;
+                }
                 case 'flippercontrol_stop':
                 case 'control_stop': {
                     const option = b.fields && b.fields.STOP_OPTION ? b.fields.STOP_OPTION[0] : 'all';
@@ -424,6 +439,21 @@
             note(`turn overshoot: each in-place turn goes ${fmt(k)}° further after "stop moving" (estimate setting)`);
             const start = sim.pose.headingDeg;
             do { yield; } while (Math.abs(sim.pose.headingDeg - start) < k);
+        }
+
+        /**
+         * Turn-creep setting: before an in-place spin starts, back straight up (wheels at -10%; the real robot slides with
+         * its wheels slipping, so only the pose matters here). ponytail: a straight-line scale on the start speed fitted
+         * to three turns of one video; replace with a mat measurement (tape marks before and after a turn).
+         */
+        function* creepBack(startPct) {
+            const c = runner.turnCreepMm * Math.max(0, startPct - 15) / 27;
+            if (!(c > 0.5)) return;
+            note(`turn creep: in-place turns start by sliding straight back, ${fmt(runner.turnCreepMm)} mm for a 42% start (hypothesis setting)`);
+            const x0 = sim.pose.x, y0 = sim.pose.y;
+            runner.leftPct = -10; runner.rightPct = -10;   // physically backward, whatever the motor pair
+            do { yield; } while (Math.hypot(sim.pose.x - x0, sim.pose.y - y0) < c && sim.status === 'running');
+            runner.leftPct = 0; runner.rightPct = 0;
         }
 
         function* move(b, ctx) {
