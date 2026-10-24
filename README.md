@@ -18,6 +18,11 @@ This season's game is **BIOGLOW**. These programs try three missions:
 2. Press **Run program**, or press **Next block ▶** to go one step at a time (**◀ Previous block** goes back).
 3. Press **Video match settings** to make the robot act more like our real robot did in our video.
 
+Two buttons at the top make it easier:
+
+- **Kid view** hides all the grown-up settings and turns on the video match settings for you.
+- **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. (The models' heights are guesses.)
+
 The simulator is a guess. It is like a weather forecast: useful, but the real robot on the real mat always has the final say.
 
 ## Which program should I use?

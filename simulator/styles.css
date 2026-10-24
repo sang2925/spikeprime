@@ -57,6 +57,26 @@ header h1 {
     text-wrap: pretty;   /* no single word left alone on the last line */
 }
 
+#view3d {
+    position: absolute;
+    inset: 0;
+}
+
+/* Kid view: only what a student needs to run a program; grown-up settings and long notes are hidden */
+body:not(.kid-view) .kid-only,
+body.kid-view :is(#robot-controls, #sensors, #drive-settings, #table-info, #mat-controls, #background-controls, #grid-controls, #movement-test, #cursor-info),
+body.kid-view #controls .note:not(.kid-only):not(#note-3d),
+body.kid-view :is(#program-sensors, #program-notes, #clearance, #turns, #obstacle-list, #zoom-control, #btn-test-step, #program-move-mode, label[for="program-move-mode"]),
+body.kid-view #mission-panel :is(.control-row, .button-row),
+body.kid-view .control-row:has(#table-walls) {
+    display: none;
+}
+
+body.kid-view #controls button {
+    font-size: 1em;
+    padding: 10px 16px;
+}
+
 /* Read by screen readers, not shown */
 .sr-only {
     position: absolute;

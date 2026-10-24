@@ -20,6 +20,12 @@
 
                 <details id="view-controls" open>
                     <summary>View</summary>
+                    <div class="button-row">
+                        <button id="btn-kid-view" aria-pressed="false">Kid view: off</button>
+                        <button id="btn-3d" aria-pressed="false">3D view: off</button>
+                    </div>
+                    <p class="note kid-only">Kid view hides the grown-up settings and uses the settings from our robot video. Press it again to see everything.</p>
+                    <p id="note-3d" class="note hidden">3D: drag to look around, scroll to zoom, right-drag to slide. Model heights are guesses. To move the robot by hand, go back to 2D.</p>
                     <button id="btn-fit-view">Fit to View</button>
                     <button id="btn-toggle-grid">Toggle Grid</button>
                     <div id="zoom-control">
@@ -364,6 +370,7 @@
             </aside>
 
             <div id="canvas-container">
+                <div id="view3d" class="hidden"></div>
                 <canvas id="simulator" role="img" aria-label="Robot game table seen from above: the mat, the robot, the models and the path the robot drove. Robot position and heading are in Robot Placement and Sensors."></canvas>
                 <p id="sr-status" class="sr-only" aria-live="polite"></p>
             </div>
@@ -378,6 +385,9 @@
     <script src="llsp3.js"></script>
     <script src="wordblocks.js"></script>
     <script src="missions.js"></script>
+    <script src="vendor/three.min.js"></script>
+    <script src="vendor/OrbitControls.js"></script>
+    <script src="view3d.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

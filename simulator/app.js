@@ -401,6 +401,11 @@ function render() {
         SimPhysics.placeRobot(sim, poseFromState());
     }
     
+    if (state.view3d) {
+        update3d();
+        return;
+    }
+
     // Clear canvas
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -763,6 +768,7 @@ canvas.addEventListener('wheel', (e) => {
  * Fit to view
  */
 btnFitView.addEventListener('click', () => {
+    if (state.view3d && view3d) view3d.resetCamera();
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
     
@@ -1774,7 +1780,76 @@ gridMajorInput.addEventListener('input', () => {
 function resizeCanvas() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
+    if (view3d) view3d.resize();
     render();
+}
+
+// ============================================================================
+// 3D VIEW (view3d.js draws the same simulation; the 2D canvas stays the place to drag the robot)
+// ============================================================================
+
+const btn3d = document.getElementById('btn-3d');
+const view3dEl = document.getElementById('view3d');
+let view3d = null;
+
+function update3d() {
+    const bg = state.backgroundImage && state.bgVisible ? (() => {
+        const [fitW, fitH] = backgroundFitSize();
+        return { image: state.backgroundImage, src: state.backgroundImage.src, opacity: state.bgOpacity, orientation: state.bgOrientation,
+            crop: { x: state.bgCropX, y: state.bgCropY, w: state.bgCropWidth, h: state.bgCropHeight }, fitW, fitH };
+    })() : null;
+    view3d.update({
+        table: { w: TABLE_INTERIOR_X, h: TABLE_INTERIOR_Y },
+        mat: { x: state.matX, y: state.matY, w: MAT_WIDTH, h: MAT_HEIGHT, rotationDeg: state.matRotation },
+        background: bg,
+        obstacles: sim.obstacles,
+        robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
+            offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
+            parts: sim.body ? sim.body.parts : [] },
+        path: sim.path,
+        showPath: state.pathVisible,
+    });
+}
+
+function set3d(on) {
+    if (on && !view3d) {
+        try {
+            view3d = View3D.create(view3dEl);
+        } catch (e) {
+            btn3d.textContent = '3D view: not available here';
+            btn3d.disabled = true;
+            return;
+        }
+    }
+    state.view3d = on;
+    view3dEl.classList.toggle('hidden', !on);
+    canvas.classList.toggle('hidden', on);
+    document.getElementById('note-3d').classList.toggle('hidden', !on);
+    btn3d.textContent = `3D view: ${on ? 'on' : 'off'}`;
+    btn3d.setAttribute('aria-pressed', String(on));
+    if (on) view3d.resize();
+    savePref('view3d', on);
+    render();
+}
+btn3d.addEventListener('click', () => set3d(!state.view3d));
+
+// Kid view: hides grown-up panels (CSS, body.kid-view) and uses the settings from the team video
+const btnKid = document.getElementById('btn-kid-view');
+function setKidView(on) {
+    document.body.classList.toggle('kid-view', on);
+    btnKid.textContent = `Kid view: ${on ? 'on' : 'off'}`;
+    btnKid.setAttribute('aria-pressed', String(on));
+    if (on && !SimPhysics.isActive(sim)) document.getElementById('btn-video-match').click();
+    savePref('kidView', on);
+}
+btnKid.addEventListener('click', () => setKidView(!document.body.classList.contains('kid-view')));
+
+// Remember the two view choices in this browser only (may be blocked: then they just reset on reload)
+function savePref(key, on) {
+    try { localStorage.setItem(`sim.${key}`, on ? '1' : '0'); } catch (e) { /* private window or blocked storage */ }
+}
+function loadPref(key) {
+    try { return localStorage.getItem(`sim.${key}`) === '1'; } catch (e) { return false; }
 }
 
 window.addEventListener('resize', resizeCanvas);
@@ -1787,6 +1862,8 @@ function init() {
     // Resize canvas
     resizeCanvas();
     btnFitView.click();   // centre the table for whatever size the board box has (phones too)
+    if (loadPref('kidView')) setKidView(true);
+    if (loadPref('view3d')) set3d(true);
     
     // Set initial button text
     btnToggleGrid.textContent = 'Hide Grid';
