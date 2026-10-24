@@ -232,18 +232,25 @@
                 robot.add(wheel);
             }
             sweeperPivot = null;
-            if (r.sweeper) {   // IDEA, not built: a port C medium motor at the front-right corner turning a 15-hole beam
-                const px = r.sweeper.pivotX, pz = r.width / 2 + 8;
-                const motor = box(56, 32, 48, 0x4a4f55);   // medium motor, roughly 5.6 x 4.8 cm and 3.2 cm tall
-                motor.position.set(px - 10, 24, pz - 22);
+            if (r.sweeper) {   // IDEA, not built: a port C medium motor on a shelf off the top-front black frame, turning a beam with a finger
+                const px = r.sweeper.pivotX, pz = 60, deck = BODY_H + 8;
+                const shelf = box(px + 30 - 30, 8, 36, 0x1b2a34);   // two black beams reaching forward from the top-front frame
+                shelf.scale.set(1, 1, 1);
+                shelf.position.set((px + 30 + 30) / 2, deck + 4, pz);
+                robot.add(shelf);
+                const motor = box(56, 32, 48, 0x4a4f55);   // medium motor, roughly 5.6 x 4.8 cm and 3.2 cm tall, lying flat, shaft up
+                motor.position.set(px, deck + 8 + 16, pz);
                 robot.add(motor);
                 const pivot = new THREE.Group();
-                pivot.position.set(px, 44, pz);
-                const beam = box(r.sweeper.beamLength + 8, 8, 8, 0x1b2a34);   // black 15-hole liftarm
-                beam.position.set(-r.sweeper.beamLength / 2 + 4, 0, 0);       // starts pointing straight back
-                const hand = box(10, 10, 10, 0xc91a09);                       // red end pin
-                hand.position.set(-r.sweeper.beamLength + 2, 0, 0);
-                pivot.add(beam, hand);
+                pivot.position.set(px, deck + 8 + 32 + 6, pz);
+                const L = r.sweeper.beamLength;
+                const beam = box(L + 8, 8, 8, 0x1b2a34);                    // black 15-hole liftarm, starts pointing straight back
+                beam.position.set(-L / 2 + 4, 0, 0);
+                const finger = box(8, r.sweeper.fingerLength, 8, 0x1b2a34); // second beam hanging down from the tip to near the mat
+                finger.position.set(-L, -r.sweeper.fingerLength / 2, 0);
+                const tip = box(10, 10, 10, 0xc91a09);                      // red end pin
+                tip.position.set(-L, -r.sweeper.fingerLength, 0);
+                pivot.add(beam, finger, tip);
                 robot.add(pivot);
                 sweeperPivot = pivot;
             }

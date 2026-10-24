@@ -1902,6 +1902,14 @@ function resizeCanvas() {
 
 const btn3d = document.getElementById('btn-3d');
 const sweeperInput = document.getElementById('show-sweeper');
+// The arm is out while the program is running its 'turn C counterclockwise' block (the arm program), or during the
+// step after the push (back 6) in programs that have no arm blocks.
+function armOut() {
+    if (!loadedProgram) return false;
+    const items = loadedProgram.stacks[0].items;
+    const at = items.findIndex((it) => /^C run counterclockwise/.test(it.label));
+    return at >= 0 ? blocksStarted === at + 1 : blocksStarted === 13;
+}
 sweeperInput.addEventListener('change', () => render());
 const view3dEl = document.getElementById('view3d');
 let view3d = null;
@@ -1922,7 +1930,7 @@ function update3d() {
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
             parts: sim.body ? sim.body.parts : [],
-            sweeper: sweeperInput.checked ? { pivotX: 125, beamLength: 120, out: blocksStarted === 13 } : null },   // out during the step after the push (back 6), stowed otherwise
+            sweeper: sweeperInput.checked ? { pivotX: 125, beamLength: 120, fingerLength: 120, out: armOut() } : null },
         path: sim.path,
         showPath: state.pathVisible,
     });
