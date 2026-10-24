@@ -190,15 +190,22 @@
         ...[36, 64, 92].flatMap((u) => ring(u, 66, 14, 54, 3, C.tan, 12)),
         ...[36, 64, 92].map((u) => ({ beam: [[u, 66, 24], [u, 66, 40]], w: 3, color: C.tan })),
     ] };
-    // Mission 05 Reaching Roots (book 05): grey frames, brown root arm with red bars
+    // Mission 05 Reaching Roots (book 05). Orientation from the Field Setup Guide photo (p. 7) and the wireframe
+    // (checked 2026-10-24): the grey frame stands on the left side, its face square to the wall; the brown root stands on
+    // the right with its curved foot reaching out from the wall (the thin strip on the wireframe), leans back towards
+    // the wall with its horn tip over the top, and the red bars point left, across the frame. u: left to right (0-40 mm),
+    // v: from the outer end (0) to the wall (88).
     const M05 = { key: 'm05', label: '05', name: 'Mission 05: Reaching Roots', frame: onRect(734, 643, 794, 774), parts: [
-        ...frameUp(4, 36, 10, 18, 0, 56, C.grey), ...frameUp(4, 36, 50, 58, 0, 56, C.grey),
-        { box: [[4, 36], [10, 58], [0, 6]], color: C.darkGrey },
-        { box: [[14, 26], [20, 48], [6, 96]], color: C.brown },
-        { beam: [[20, 34, 96], [20, 84, 120]], w: 10, color: C.brown },
-        { beam: [[20, 84, 120], [20, 92, 140]], w: 6, color: C.brown },
-        { beam: [[8, 40, 80], [32, 40, 80]], w: 4, color: C.red }, { beam: [[8, 70, 110], [32, 70, 110]], w: 4, color: C.red },
-        { box: [[14, 26], [48, 60], [84, 92]], color: C.green },
+        { box: [[6, 14], [40, 86], [0, 8]], color: C.grey }, { box: [[6, 14], [40, 86], [48, 56]], color: C.grey },
+        { box: [[6, 14], [40, 48], [0, 56]], color: C.grey }, { box: [[6, 14], [78, 86], [0, 56]], color: C.grey },
+        { box: [[30, 40], [0, 40], [0, 6]], color: C.brown }, { box: [[24, 40], [30, 62], [0, 14]], color: C.brown },
+        { box: [[24, 32], [36, 48], [14, 22]], color: C.green },
+        { beam: [[34, 30, 10], [34, 74, 96]], w: 8, color: C.brown }, { beam: [[34, 74, 96], [34, 94, 120]], w: 7, color: C.brown },
+        { beam: [[22, 40, 10], [22, 82, 104]], w: 8, color: C.brown },
+        { cyl: [34, 98], r: 4, r2: 1, z: [118, 140], color: C.brown },
+        { beam: [[30, 56, 62], [0, 56, 62]], w: 5, color: C.red }, { sphere: [0, 56], z: 62, r: 5, color: C.red },
+        { beam: [[30, 72, 88], [0, 72, 88]], w: 5, color: C.red }, { sphere: [0, 72], z: 88, r: 5, color: C.red },
+        { box: [[18, 28], [60, 70], [70, 78]], color: C.green },
     ] };
     // Missions 08 Tangled and 09 Research Platform (book 07): the big tree, its canopy and the research platform
     const M0809 = { key: 'm0809', label: '08·09', name: 'Missions 08 and 09: Tangled and Research Platform', frame: onRect(947, 680, 1098, 800), parts: [
