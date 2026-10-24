@@ -131,27 +131,38 @@
         function lambert(color, opacity) {
             return new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity: opacity ?? 1 });
         }
-        const hinged = {};   // model key -> { pivot, axis, sign, angle, target }
+        const movers = {};   // model key -> [{ obj, type, axis, sign, max, dir, dist, state, animate, value, target }]
         function buildModel(m) {
             const g = new THREE.Group();
-            let hingeGroup = null;
-            if (m.hinge) {   // parts that swing (Mission 11's root cover) go in a group that turns about the hinge line
-                const a = toV(m.hinge.a[0], m.hinge.a[1], m.hinge.az), b = toV(m.hinge.b[0], m.hinge.b[1], m.hinge.bz);
+            const groups = {};
+            const old = movers[m.key] || [];
+            movers[m.key] = (m.moves || []).map((mv, i) => {
+                const inner = new THREE.Group();
+                groups[mv.group] = inner;
+                const prev = old[i] || { value: 0, target: 0 };
+                if (mv.type === 'slide') {   // parts that slide (the leafcutter's ant and rack)
+                    g.add(inner);
+                    const dir = new THREE.Vector3(mv.dir[0], 0, -mv.dir[1]);
+                    const it = { obj: inner, type: 'slide', dir, dist: mv.dist, state: mv.state, animate: mv.animate, value: prev.value, target: prev.target };
+                    inner.position.copy(dir).multiplyScalar(mv.dist * it.value);
+                    return it;
+                }
+                // parts that swing about a hinge line (Mission 11's root cover, the mycelium arm)
+                const a = toV(mv.a[0], mv.a[1], mv.az), b = toV(mv.b[0], mv.b[1], mv.bz);
                 const axis = b.clone().sub(a).normalize();
-                const out = new THREE.Vector3(m.hinge.outward[0], 0, -m.hinge.outward[1]);
-                const sign = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 1, 0)).dot(out) >= 0 ? 1 : -1;   // fall outward
+                const toward = new THREE.Vector3(mv.toward[0], 0, -mv.toward[1]);
+                const sign = new THREE.Vector3().crossVectors(axis, new THREE.Vector3(0, 1, 0)).dot(toward) >= 0 ? 1 : -1;   // the top swings towards 'toward'
                 const pivot = new THREE.Group();
                 pivot.position.copy(a);
-                hingeGroup = new THREE.Group();
-                hingeGroup.position.copy(a).multiplyScalar(-1);
-                pivot.add(hingeGroup);
+                inner.position.copy(a).multiplyScalar(-1);
+                pivot.add(inner);
                 g.add(pivot);
-                const old = hinged[m.key];
-                hinged[m.key] = { pivot, axis, sign, angle: old ? old.angle : 0, target: old ? old.target : 0 };
-                pivot.setRotationFromAxisAngle(axis, sign * hinged[m.key].angle);
-            }
+                const it = { obj: pivot, type: 'hinge', axis, sign, max: mv.max, state: mv.state, animate: mv.animate, value: prev.value, target: prev.target };
+                pivot.setRotationFromAxisAngle(axis, sign * mv.max * it.value);
+                return it;
+            });
             for (const p of m.pieces) {
-                const parent = p.group && hingeGroup ? hingeGroup : g;
+                const parent = (p.group && groups[p.group]) || g;
                 if (p.kind === 'prism') {
                     const geo = new THREE.ExtrudeGeometry(new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: p.z1 - p.z0, bevelEnabled: false });
                     geo.rotateX(-Math.PI / 2);
@@ -260,28 +271,40 @@
             if (rk !== robotKey) { robotKey = rk; buildRobot(r); }
             robot.position.copy(toV(r.x, r.y));
             robot.rotation.y = r.headingDeg * Math.PI / 180;
-            for (const [key, down] of Object.entries(d.modelState || {})) if (hinged[key]) hinged[key].target = down ? Math.PI / 2 : 0;
-            animateHinges();
+            for (const list of Object.values(movers)) {
+                for (const it of list) {
+                    it.target = Math.max(0, Math.min(1, (d.modelState || {})[it.state] || 0));
+                    if (!it.animate) { it.value = it.target; applyMove(it); }
+                }
+            }
+            animateMoves();
             const n = d.showPath ? d.path.length : 0;
             if (n !== pathLen) { pathLen = n; buildPath(d.showPath ? d.path : []); }
             draw();
         }
 
         resize();
-        // Swing hinged parts towards their target (about a quarter turn in 0.4 s), then stop asking for frames
+        function applyMove(it) {
+            if (it.type === 'slide') it.obj.position.copy(it.dir).multiplyScalar(it.dist * it.value);
+            else it.obj.setRotationFromAxisAngle(it.axis, it.sign * it.max * it.value);
+        }
+
+        // Animated moves (the Mission 11 cover falling) go to their target in about 0.4 s, then stop asking for frames
         let swinging = false, lastT = 0;
-        function animateHinges() {
+        function animateMoves() {
             if (swinging) return;
             const step = (t) => {
                 const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
                 lastT = t;
                 let moving = false;
-                for (const h of Object.values(hinged)) {
-                    if (h.angle === h.target) continue;
-                    const d = h.target - h.angle, max = 4 * dt;
-                    h.angle = Math.abs(d) <= max ? h.target : h.angle + Math.sign(d) * max;
-                    h.pivot.setRotationFromAxisAngle(h.axis, h.sign * h.angle);
-                    moving = true;
+                for (const list of Object.values(movers)) {
+                    for (const it of list) {
+                        if (!it.animate || it.value === it.target) continue;
+                        const diff = it.target - it.value, max = 2.5 * dt;
+                        it.value = Math.abs(diff) <= max ? it.target : it.value + Math.sign(diff) * max;
+                        applyMove(it);
+                        moving = true;
+                    }
                 }
                 renderer.render(scene, camera);
                 if (moving) requestAnimationFrame(step); else { swinging = false; lastT = 0; }

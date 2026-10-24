@@ -23,6 +23,7 @@ Two buttons at the top make it easier:
 - **Kid view** hides all the grown-up settings and turns on the video match settings for you.
 - **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. Every mission model is built from LEGO bricks, copied by eye from the official building instructions. The leafcutter (Missions 06 and 07) and Mission 11 have the most detail.
 - When the robot bumps the back of **Mission 11**, its window (the root cover) falls down, in 2D and 3D, and the page says so.
+- When the robot pushes the **leafcutter's ant**, the ant slides towards the nest and the mycelium arm swings up. The page tells you how far the ant got. It has to go about 8 cm to touch the nest.
 
 The simulator is a guess. It is like a weather forecast: useful, but the real robot on the real mat always has the final say.
 

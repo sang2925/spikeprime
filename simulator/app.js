@@ -1177,7 +1177,10 @@ function afterSimChange() {
 // back of the model during a program run. ponytail: any touch on the back half counts; how hard the real model needs
 // bumping is not modelled.
 // ---------------------------------------------------------------------------
-const missionState = { m11: false };
+const missionState = { m11: false, m0607: 0, pressS: 0, pressFrom: null };
+function resetMissionState() {
+    Object.assign(missionState, { m11: false, m0607: 0, pressS: 0, pressFrom: null });
+}
 const missionStatusEl = document.getElementById('mission-status');
 let m11Geo = null;
 function m11Geometry() {
@@ -1197,8 +1200,51 @@ function insidePoly([x, y], poly) {
     }
     return inside;
 }
+// Leafcutter: the robot's front (the pusher, if ticked) pushes the ant along its rack, millimetre for millimetre.
+// Progress 0 = the ant at its start line (the thin wireframe line), 1 = the ant touching the nest after LEAF_TRAVEL_MM.
+// In the team video the robot stopped (the m0607stop outline) with the ant still 5-7 cm short of the nest and the
+// mycelium still folded (frames at 19.6 and 21.0 s, checked 2026-10-24), and the simulator copies that stop.
+// ponytail: the travel is read off the building instructions and photos, not measured; leaves falling out is not simulated.
+const LEAF_TRAVEL_MM = 84;
+let leafGeo = null;
+function leafGeometry() {
+    const key = `${state.matX},${state.matY},${state.matRotation}`;
+    if (leafGeo && leafGeo.key === key) return leafGeo;
+    const model = Models3D.MODELS.find((m) => m.key === 'm0607');
+    const W = ([u, v]) => { const [x, y] = Models3D.framePx(model, u, v); return wireframePxToWorld(x, y); };
+    const start = W([25, -100]), ahead = W([25, 0]), side = W([75, -100]);
+    const len = Math.hypot(ahead[0] - start[0], ahead[1] - start[1]), sl = Math.hypot(side[0] - start[0], side[1] - start[1]);
+    const ev = [(ahead[0] - start[0]) / len, (ahead[1] - start[1]) / len], eu = [(side[0] - start[0]) / sl, (side[1] - start[1]) / sl];
+    const stop = BioglowMissions.OBSTACLES.find((o) => o.key === 'm0607stop').corners.map(([x, y]) => wireframePxToWorld(x, y));
+    const stopAt = Math.min(...stop.map(([x, y]) => (x - start[0]) * ev[0] + (y - start[1]) * ev[1]));
+    leafGeo = { key, start, ev, eu, stopAt };
+    return leafGeo;
+}
+function checkLeafcutter() {
+    const g = leafGeometry();
+    const polys = SimPhysics.bodyPolys(sim.pose, sim.body);
+    const part = polys.find((r) => r.name !== 'box') || polys[0];   // corners 0 and 3 are the front edge
+    const fronts = [part.poly[0], part.poly[3], [(part.poly[0][0] + part.poly[3][0]) / 2, (part.poly[0][1] + part.poly[3][1]) / 2]];
+    let best = 0;
+    for (const [x, y] of fronts) {
+        const dx = x - g.start[0], dy = y - g.start[1];
+        if (Math.abs(dx * g.eu[0] + dy * g.eu[1]) < 45) best = Math.max(best, dx * g.ev[0] + dy * g.ev[1]);
+    }
+    const p = Math.max(0, Math.min(1, best / LEAF_TRAVEL_MM));
+    const before = missionState.m0607;
+    if (p > before) missionState.m0607 = p;   // the rack stays in when the robot backs away
+    if (p >= 0.999) {   // still pressing at the stop: measure how long (simulated seconds)
+        if (missionState.pressFrom === null) missionState.pressFrom = sim.timeS;
+        missionState.pressS = Math.max(missionState.pressS, sim.timeS - missionState.pressFrom);
+    } else {
+        missionState.pressFrom = null;
+    }
+}
+
 function checkMissions() {
-    if (missionState.m11 || !lastRunner || !sim.body) return;
+    if (!lastRunner || !sim.body) return;
+    checkLeafcutter();
+    if (missionState.m11) return;
     const g = m11Geometry();
     const back = (sim.pose.x - g.centre[0]) * g.out[0] + (sim.pose.y - g.centre[1]) * g.out[1] < 0;
     if (!back) return;
@@ -1207,9 +1253,16 @@ function checkMissions() {
     if (touch) missionState.m11 = true;
 }
 function updateMissionStatus() {
-    missionStatusEl.textContent = !lastRunner ? '' : missionState.m11
-        ? 'Mission 11: the robot bumped the back, so the window (root cover) fell down. ✓ (simulated)'
-        : 'Mission 11: window still up.';
+    if (!lastRunner) { missionStatusEl.textContent = ''; return; }
+    const p = missionState.m0607;
+    const lines = [
+        p >= 0.999 ? 'Missions 06 and 07: the ant reached the nest and the mycelium is out. ✓' : p > 0
+            ? `Missions 06 and 07: the ant moved ${(p * LEAF_TRAVEL_MM / 10).toFixed(1)} of about ${LEAF_TRAVEL_MM / 10} cm to the nest, so not scored yet.` : 'Missions 06 and 07: the ant has not been pushed.',
+        missionState.pressS > 0.5 ? `Still pushing the leafcutter for ${missionState.pressS.toFixed(1)} s after the ant reached the nest: the leaves could fall out (the simulator cannot tell).` : '',
+        missionState.m11 ? 'Mission 11: the robot bumped the back, so the window (root cover) fell down. ✓' : 'Mission 11: window still up.',
+        '(simulated; the ant start and travel are read off the instructions, not measured)',
+    ];
+    missionStatusEl.replaceChildren(...lines.filter(Boolean).map((t) => { const d = document.createElement('div'); d.textContent = t; return d; }));
 }
 function drawMissionModels2d() {
     if (!missionState.m11) return;
@@ -1328,7 +1381,7 @@ btnSimReset.addEventListener('click', () => {
     lastRunner = null;
     pauseAtBlock = null;
     blocksStarted = 0;
-    missionState.m11 = false;
+    resetMissionState();
     afterSimChange();
 });
 
@@ -1518,7 +1571,7 @@ function runProgram(pauseAt, instant, keepHistory) {
     pausedByHiddenTab = false;
     pauseAtBlock = pauseAt || null;
     blocksStarted = 0;
-    missionState.m11 = false;
+    resetMissionState();
     pausedAtBlockStart = false;
     if (!keepHistory) stepHistory = [];
     applyObstacles();
@@ -1863,7 +1916,7 @@ function update3d() {
         background: bg,
         obstacles: sim.obstacles.filter((o) => !MODEL_OUTLINES.has(o.name)),   // these two are drawn as LEGO models instead
         models: models3dWorld(),
-        modelState: { m11: missionState.m11 },
+        modelState: { m11: missionState.m11 ? 1 : 0, m0607: missionState.m0607 },
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
             parts: sim.body ? sim.body.parts : [] },
@@ -1873,7 +1926,7 @@ function update3d() {
 }
 
 // The LEGO-style models (models3d.js) in table mm, recomputed when the mat moves
-const MODEL_OUTLINES = new Set(BioglowMissions.OBSTACLES.filter((o) => Models3D.MODELS.some((m) => m.key === o.key)).map((o) => o.name));
+const MODEL_OUTLINES = new Set(BioglowMissions.OBSTACLES.filter((o) => Models3D.MODELS.some((m) => m.key === o.key || (m.alsoHides || []).includes(o.key))).map((o) => o.name));
 let models3dCache = { key: '', list: [] };
 function models3dWorld() {
     const key = `${state.matX},${state.matY},${state.matRotation}`;
@@ -1890,16 +1943,13 @@ function models3dWorld() {
             if (p.along) q.along = dir(p.a, p.along);
             return q;
         });
-        let hinge = null;
-        if (m.hinge) {
-            const H = ([u, v]) => W(Models3D.framePx(m, u, v));
-            const o0 = H([40, 0]), o1 = H(m.hinge.outward);
-            hinge = { a: H(m.hinge.a), az: m.hinge.a[2], b: H(m.hinge.b), bz: m.hinge.b[2], outward: [o1[0] - o0[0], o1[1] - o0[1]] };
-        }
+        const moves = Models3D.moves(m).map((mv) => mv.type === 'slide'
+            ? { ...mv, dir: dir(Models3D.framePx(m, 0, 0), mv.dir) }
+            : { ...mv, a: W(mv.a), b: W(mv.b), toward: dir(mv.a, mv.toward) });
         const xs = pieces.filter((p) => p.poly).flatMap((p) => p.poly);
         const labelAt = [xs.reduce((t, p) => t + p[0], 0) / xs.length, xs.reduce((t, p) => t + p[1], 0) / xs.length];
         const top = Math.max(...pieces.map((p) => Math.max(p.z1 ?? 0, (p.z ?? 0) + (p.r ?? 0), p.az ?? 0, p.bz ?? 0)));
-        return { key: m.key, label: m.label, pieces, labelAt, labelZ: top + 45, hinge };
+        return { key: m.key, label: m.label, pieces, labelAt, labelZ: top + 45, moves };
     });
     models3dCache = { key, list };
     return list;

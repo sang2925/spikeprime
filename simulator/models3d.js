@@ -26,7 +26,7 @@
         key: 'm11', label: '11', name: 'Mission 11: Window to the Past',
         frame: { O: [2251, 1527], U: [2336, 1443], V: [2172, 1447] },
         // the cover swings on this line (u from 0 to 80 at the front edge, just above the mat) and falls outward, to -v
-        hinge: { group: 'cover', a: [0, 0, PLATE], b: [80, 0, PLATE], outward: [40, -40] },
+        moves: [{ group: 'cover', type: 'hinge', a: [0, 0, PLATE], b: [80, 0, PLATE], toward: [0, -1], max: Math.PI / 2, state: 'm11', animate: true }],
         // the cover lying flat on the mat (for the 2D view): u 8 to 72, v 0 to -64
         flat: [[8, 0], [72, 0], [72, -64], [8, -64]],
         parts: [
@@ -81,6 +81,13 @@
     const M0607 = {
         key: 'm0607', label: '06·07', name: 'Missions 06 and 07: Leafcutter Frenzy and Humongous Fungus',
         frame: { O: [2402, 828], U: [2334, 744], V: [2503, 727] },
+        // Pushing the ant slides the rack (and the ant) into the nest, and the rack turns the gear that swings the
+        // mycelium arm up and over towards the far wall (book 06 steps 48 and 91). How far the robot has pushed comes
+        // from app.js (state 'm0607', 0 to 1).
+        moves: [
+            { group: 'ant', type: 'slide', dir: [0, 1], dist: 84, state: 'm0607' },
+            { group: 'arm', type: 'hinge', pxA: [2509, 740, 112], pxB: [2549, 780, 112], pxToward: [1, -1], max: 2.6, state: 'm0607' },
+        ],
         parts: [
             // white base plate, tan walls, white raised floor
             { box: [[4, 70], [4, 92], [0, PLATE]], color: C.white, studs: true },
@@ -102,14 +109,14 @@
             // the leaf fragments standing in the nest: green nearest the ant, then orange, yellow, white (field setup guide p. 8)
             ...[[C.green, 24], [C.orange, 34], [C.yellow, 44], [C.white, 54]].map(([color, v]) => ({ leaf: [36, v], z: [62, 112], color })),
             // the white toothed rack, pulled out to the starting line, and the ant on its red sled
-            { box: [[20, 30], [-92, 40], [PLATE, PLATE + 6]], color: C.white },
-            { box: [[22, 28], [-92, 40], [PLATE + 6, PLATE + 9]], color: C.white },
-            { box: [[10, 40], [-100, -84], [0, PLATE + 6]], color: C.red },
-            { box: [[14, 36], [-98, -86], [PLATE + 6, PLATE + 10]], color: C.black },
-            { sphere: [25, -92], z: 30, r: 9, color: C.red },
-            { sphere: [25, -92], z: 19, r: 7, color: C.black },
-            ...[-1, 1].flatMap((s) => [-97, -92, -87].map((v) => ({ beam: [[25, v, 16], [25 + s * 16, v, 6]], w: 2.5, color: C.black }))),
-            { leaf: [40, -90], z: [10, 40], color: C.green, flat: true },
+            { box: [[20, 30], [-92, 40], [PLATE, PLATE + 6]], color: C.white, group: 'ant' },
+            { box: [[22, 28], [-92, 40], [PLATE + 6, PLATE + 9]], color: C.white, group: 'ant' },
+            { box: [[10, 40], [-100, -84], [0, PLATE + 6]], color: C.red, group: 'ant' },
+            { box: [[14, 36], [-98, -86], [PLATE + 6, PLATE + 10]], color: C.black, group: 'ant' },
+            { sphere: [25, -92], z: 30, r: 9, color: C.red, group: 'ant' },
+            { sphere: [25, -92], z: 19, r: 7, color: C.black, group: 'ant' },
+            ...[-1, 1].flatMap((s) => [-97, -92, -87].map((v) => ({ beam: [[25, v, 16], [25 + s * 16, v, 6]], w: 2.5, color: C.black, group: 'ant' }))),
+            { leaf: [40, -90], z: [10, 40], color: C.green, flat: true, group: 'ant' },
         ],
         // the mycelium tower on the small square beside the nest (pixels, not the nest frame)
         extra: [
@@ -119,9 +126,9 @@
             { pxBox: [[2500, 748], [2558, 772]], z: [104, 114], color: C.white },
             // the white mycelium arm, folded (starting position, field setup guide p. 8): it hangs from the top of the
             // tower down to the front, the side the ant is on, with the red handle lying across its end near the mat
-            { pxBeam: [[2529, 760, 112], [2470, 822, 18]], w: 7, color: C.white },
-            { pxBeam: [[2529, 752, 108], [2486, 800, 60]], w: 7, color: C.white },
-            { pxBeam: [[2448, 803, 16], [2492, 841, 16]], w: 9, color: C.red },
+            { pxBeam: [[2529, 760, 112], [2470, 822, 18]], w: 7, color: C.white, group: 'arm' },
+            { pxBeam: [[2529, 752, 108], [2486, 800, 60]], w: 7, color: C.white, group: 'arm' },
+            { pxBeam: [[2448, 803, 16], [2492, 841, 16]], w: 9, color: C.red, group: 'arm' },
         ],
     };
 
@@ -136,16 +143,26 @@
         { box: [[u0, u1], [v0, v1], [z0, z0 + 8]], color }, { box: [[u0, u1], [v0, v1], [z1 - 8, z1]], color },
         { box: [[u0, u0 + 8], [v0, v1], [z0, z1]], color }, { box: [[u1 - 8, u1], [v0, v1], [z0, z1]], color }];
 
-    // Mission 01 Drone Survey (book 01): round pad, black A-frame, the drone up top
-    const M01 = { key: 'm01', label: '01', name: 'Mission 01: Drone Survey', frame: onRect(1827, 2195, 1923, 2291), parts: [
-        { cyl: [32, 32], r: 30, z: [0, PLATE * 2], color: C.darkGrey },
-        { cyl: [32, 32], r: 22, z: [PLATE * 2, PLATE * 3], color: C.grey },
-        { beam: [[10, 32, 6], [30, 32, 150]], w: 4, color: C.black },
-        { beam: [[54, 32, 6], [34, 32, 150]], w: 4, color: C.black },
-        { box: [[22, 42], [24, 40], [146, 154]], color: C.black },
-        { box: [[26, 38], [26, 38], [128, 146]], color: C.azure, opacity: 0.8 },
-        { box: [[40, 62], [46, 60], [PLATE * 2, 20]], color: C.red }, { box: [[46, 60], [48, 58], [20, 28]], color: C.green },
-    ] };
+    // Mission 01 Drone Survey (book 01; Field Setup Guide p. 3): the round launcher pad, two low strings running west
+    // to a red anchor (wireframe bracket at x 1127), the drone riding on them (small square at x 1483), and the LiDAR
+    // map on its feet beside the survey square
+    const M01 = { key: 'm01', label: '01', name: 'Mission 01: Drone Survey', frame: onRect(1827, 2195, 1923, 2291),
+        alsoHides: ['m01line', 'm01map'], parts: [
+            { cyl: [32, 32], r: 30, z: [0, PLATE * 2], color: C.darkGrey },
+            { cyl: [32, 32], r: 22, z: [PLATE * 2, 14], color: C.grey },
+            { box: [[24, 40], [24, 40], [14, 36]], color: C.white }, { sphere: [32, 32], z: 40, r: 6, color: C.tan },
+        ],
+        extra: [
+            { pxBeam: [[1850, 2231, 22], [1127, 2231, 12]], w: 2, color: C.black },
+            { pxBeam: [[1850, 2255, 22], [1127, 2255, 12]], w: 2, color: C.black },
+            { pxBox: [[1104, 2215], [1146, 2271]], z: [0, 24], color: C.red },
+            { pxBox: [[1468, 2226], [1498, 2260]], z: [10, 26], color: C.black },
+            { pxBox: [[1474, 2232], [1492, 2254]], z: [26, 34], color: C.azure },
+            { pxBox: [[1678, 1978], [1700, 2002]], z: [0, 12], color: C.darkGrey }, { pxBox: [[1750, 1934], [1774, 1958]], z: [0, 12], color: C.darkGrey },
+            { pxPoly: [[1652, 1992], [1762, 1926], [1790, 1964], [1680, 2030]], z: [12, 30], color: C.grey },
+            { pxPoly: [[1668, 1990], [1758, 1936], [1776, 1962], [1686, 2016]], z: [30, 34], color: C.green },
+            { pxBox: [[1700, 1962], [1720, 1982]], z: [34, 46], color: C.red },
+        ] };
     // Mission 02 Exploding Seeds (book 02): grey frame base, green stalk, green hose arches, brown seeds with yellow rings
     const M02 = { key: 'm02', label: '02', name: 'Mission 02: Exploding Seeds', frame: onRect(1059, 1476, 1160, 1577), parts: [
         { box: [[14, 54], [14, 54], [0, 8]], color: C.grey }, { box: [[22, 46], [22, 46], [8, 12]], color: C.darkGrey },
@@ -196,14 +213,15 @@
         { beam: [[66, 40, 20], [100, 6, 4]], w: 5, color: C.green }, { beam: [[100, 6, 4], [120, -10, 4]], w: 5, color: C.tan },
         { box: [[30, 36], [56, 62], [100, 110]], color: C.red },
     ] };
-    // Mission 10 Fragile Microhabitats (book 08). Which outline is the spider habitat and which the snail habitat is a guess.
-    const M10A = { key: 'm10a', label: '10', name: 'Mission 10: spider habitat (guess)', frame: onRect(1250, 736, 1307, 805), parts: [
+    // Mission 10 Fragile Microhabitats (book 08). Field Setup Guide p. 10: the snail habitat is by the top wall next to
+    // the big tree (outline m10a), the spider habitat on the sand in the middle (outline m10b).
+    const M10A = { key: 'm10b', label: '10', name: 'Mission 10: spider habitat', frame: onRect(1672, 1225, 1748, 1285), parts: [
         { box: [[4, 34], [16, 28], [0, 6]], color: C.brightGreen },
         ...frameUp(6, 34, 18, 26, 6, 78, C.white),
         { box: [[4, 10], [18, 26], [6, 86]], color: C.brown }, { box: [[4, 34], [18, 26], [80, 86]], color: C.brown },
         { sphere: [22, 22], z: 44, r: 5, color: C.black },
     ] };
-    const M10B = { key: 'm10b', label: '10', name: 'Mission 10: snail habitat (guess)', frame: onRect(1672, 1225, 1748, 1285), parts: [
+    const M10B = { key: 'm10a', label: '10', name: 'Mission 10: snail habitat', frame: onRect(1250, 736, 1307, 805), parts: [
         { box: [[6, 30], [10, 30], [0, 16]], color: C.darkGrey },
         { beam: [[18, 20, 14], [44, 20, 50]], w: 10, color: C.brightGreen },
         { beam: [[24, 20, 10], [50, 20, 46]], w: 4, color: C.brown },
@@ -262,6 +280,7 @@
             if (pts.length) out.push({ kind: 'studs', pts, z, color });
         };
         for (const p of model.parts) {
+            const n0 = out.length;
             if (p.box) {
                 const [[u0, u1], [v0, v1], [z0, z1]] = p.box;
                 out.push({ kind: 'prism', poly: [px(u0, v0), px(u1, v0), px(u1, v1), px(u0, v1)], z0, z1, color: p.color, opacity: p.opacity, group: p.group });
@@ -284,15 +303,20 @@
                 if (p.flat) out.push({ kind: 'beam', a: px(u - 4, v), az: z0, b: px(u + 22, v + 6), bz: z0 + 4, w: 10, color: p.color, flatten: true });
                 else out.push({ kind: 'beam', a: px(u, v), az: z0, b: px(u, v), bz: z1, w: 12, color: p.color, flatten: true, along: eu });
             }
+            if (p.group) for (let i = n0; i < out.length; i++) out[i].group = p.group;
         }
         for (const p of model.extra || []) {
-            if (p.pxBox) {
+            const n0 = out.length;
+            if (p.pxPoly) {
+                out.push({ kind: 'prism', poly: p.pxPoly, z0: p.z[0], z1: p.z[1], color: p.color });
+            } else if (p.pxBox) {
                 const [[x0, y0], [x1, y1]] = p.pxBox;
                 out.push({ kind: 'prism', poly: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], z0: p.z[0], z1: p.z[1], color: p.color });
             } else if (p.pxBeam) {
                 const [a, b] = p.pxBeam;
                 out.push({ kind: 'beam', a: [a[0], a[1]], az: a[2], b: [b[0], b[1]], bz: b[2], w: p.w, color: p.color });
             }
+            if (p.group) for (let i = n0; i < out.length; i++) out[i].group = p.group;
         }
         return out;
     }
@@ -305,7 +329,22 @@
         return [f.O[0] + (u * eu[0] + v * ev[0]) / MM_PER_PX, f.O[1] + (u * eu[1] + v * ev[1]) / MM_PER_PX];
     }
 
-    const Models3D = { MODELS, pieces, framePx, MM_PER_PX };
+    /**
+     * Moving parts in wireframe pixels: hinge { a, az, b, bz, toward: pixel vector the top swings towards, max radians }
+     * or slide { dir: pixel unit vector, dist mm }. Each follows a state value from 0 to 1 (app.js).
+     */
+    function moves(model) {
+        const P = (u, v) => framePx(model, u, v), o = P(0, 0);
+        const vec = (u, v) => { const q = P(u, v); return [q[0] - o[0], q[1] - o[1]]; };
+        return (model.moves || []).map((m) => {
+            const base = { group: m.group, type: m.type, state: m.state, animate: !!m.animate, max: m.max, dist: m.dist };
+            if (m.type === 'slide') { const d = vec(...m.dir), l = Math.hypot(...d); return { ...base, dir: [d[0] / l, d[1] / l] }; }
+            const [a, b] = m.pxA ? [m.pxA, m.pxB] : [[...P(m.a[0], m.a[1]), m.a[2]], [...P(m.b[0], m.b[1]), m.b[2]]];
+            return { ...base, a: [a[0], a[1]], az: a[2], b: [b[0], b[1]], bz: b[2], toward: m.pxToward || vec(...m.toward) };
+        });
+    }
+
+    const Models3D = { MODELS, pieces, framePx, moves, MM_PER_PX };
     if (typeof module !== 'undefined' && module.exports) module.exports = Models3D;
     else root.Models3D = Models3D;
 })(this);
