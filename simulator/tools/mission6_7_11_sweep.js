@@ -95,6 +95,10 @@ async function main() {
     const opt = (name) => parseFloat((args.find((a) => a.startsWith(`--${name}=`)) || `--${name}=0`).split('=')[1]);
     const offsetMm = opt('offset'), creepMm = opt('creep');
     const hookArg = args.find((x) => x.startsWith('--hook'));   // --hook or --hook=<tip mm ahead of the wheels>
+    if (args.includes('--sidemotor')) BODY.parts = [...BODY.parts, { name: 'side motor', front: 126, back: 70, left: -84, right: -132 }];   // a medium motor stuck on the right side, front-right: 5.6 x 4.8 cm outside the body
+    if (args.includes('--finger')) BODY.parts = [...BODY.parts, { name: 'stowed finger', front: 12, back: 4, left: -96, right: -104 }];   // the arm's finger hanging beside the right side while the arm is stowed (8 mm square, 1.2-2 cm outside the body)
+    if (args.includes('--fingerfront')) BODY.parts = [...BODY.parts, { name: 'finger stowed across the front', front: 133, back: 125, left: 64, right: 56 }];   // arm stowed pointing left across the front, finger hanging 3.3 cm past the body, inside the body width
+    if (args.includes('--shelf')) BODY.parts = [...BODY.parts, { name: 'top shelf', front: 155, back: 92, left: -42, right: -78 }];   // the top-front shelf for the arm: 6 cm past the body front, 3.6 cm wide, high up (the outlines are flat, so height is ignored)
     swingMode = args.includes('--swing');
     const startArg = args.find((x) => x.startsWith('--start='));   // --start=x,y in mm (box centre), overrides the video start
     if (startArg) { const [sx, sy] = startArg.split('=')[1].split(',').map(Number); START.x = sx; START.y = sy; }

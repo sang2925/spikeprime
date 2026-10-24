@@ -4,8 +4,8 @@ one comment beside them. Nothing else changes (the reopen check below proves it)
 the 6-7-11 programs did not have, so it is added to both extension lists.
 
 The swing angle and direction are guesses to tune on the robot (see the comment text). The old lift arm used 120 degrees
-at speed 75-80 (counterclockwise out, clockwise back); a beam that must swing from pointing back to pointing forward
-needs about 180.
+at speed 75-80 (counterclockwise out, clockwise back). This arm rests pointing LEFT across the front of the robot and
+swings about 105 degrees to point forward and a little right, at the Mission 7 handle.
 
 Run from the project root:
   python3 -I tools/add_arm_blocks.py <source.llsp3> <output.llsp3>
@@ -14,10 +14,10 @@ import copy, io, json, math, os, random, string, sys, zipfile
 
 DONOR = 'archived-llsp3/Harrison_Lucas_Kai_leafcutter_uncover.llsp3'
 PUSH_STEP = 7
-OUT_DEG, SPEED = '180', '75'
+OUT_DEG, SPEED = '105', '75'
 ARM_TEXT = ("ARM (port C), NOT TESTED\n"
-            "C counterclockwise 180: the arm swings forward to the Mission 7 handle. C clockwise 180: back out of the way.\n"
-            "Wrong way? Swap the two directions. Too short? Try 200.")
+            "C counterclockwise 105: the arm swings from the left, across the front, to the Mission 7 handle. C clockwise 105: back.\n"
+            "Wrong way? Swap the two directions. Too short? Try 120.")
 
 
 def new_id():

@@ -295,7 +295,7 @@
             if (rk !== robotKey) { robotKey = rk; buildRobot(r); }
             robot.position.copy(toV(r.x, r.y));
             robot.rotation.y = r.headingDeg * Math.PI / 180;
-            if (sweeperPivot) sweeperPivot.rotation.y = Math.PI * (r.sweeper.out ? 1 : 0);   // out = pointing forward after swinging along the right side
+            if (sweeperPivot) sweeperPivot.rotation.y = (r.sweeper.out ? -193 : -90) * Math.PI / 180;   // stowed: beam points left across the front; out: swung 103 degrees to point forward and a little right
             for (const list of Object.values(movers)) {
                 for (const it of list) {
                     it.target = Math.max(0, Math.min(1, (d.modelState || {})[it.state] || 0));

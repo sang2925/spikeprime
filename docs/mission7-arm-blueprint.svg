@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" font-family="Helvetica, Arial, sans-serif">
+  <rect width="900" height="640" fill="#ffffff"/>
+  <text x="20" y="30" font-size="20" font-weight="bold">Mission 7 arm: blueprint (a plan, not tested on the robot)</text>
+  <text x="20" y="52" font-size="13" fill="#444">1 LEGO hole = 8 mm. Sizes are estimates from the team video and the 18.4 x 16.8 cm body.</text>
+
+  <!-- TOP VIEW -->
+  <text x="20" y="90" font-size="15" font-weight="bold">TOP VIEW (robot facing UP)</text>
+  <!-- body 168 wide x 184 long, scale 1.2 px/mm -->
+  <rect x="140" y="280" width="202" height="221" fill="#f4c9d0" stroke="#c91a09" stroke-width="2"/>
+  <text x="241" y="395" text-anchor="middle" font-size="14">ROBOT BODY</text>
+  <text x="241" y="413" text-anchor="middle" font-size="12" fill="#444">16.8 x 18.4 cm</text>
+  <rect x="215" y="228" width="52" height="52" fill="#9a9a9a" stroke="#555"/>
+  <text x="241" y="258" text-anchor="middle" font-size="11">pusher</text>
+  <!-- wheels -->
+  <rect x="128" y="440" width="12" height="40" fill="#222"/><rect x="342" y="440" width="12" height="40" fill="#222"/>
+  <!-- shelf and motor at front-right: x from 140 + (84+60)*1.2... robot centre x=241; right is +x -->
+  <rect x="283" y="218" width="68" height="44" fill="#1b2a34" opacity="0.85"/>
+  <text x="317" y="244" text-anchor="middle" font-size="11" fill="#fff">SHELF</text>
+  <circle cx="313" cy="231" r="9" fill="#4a4f55" stroke="#000"/>
+  <text x="335" y="205" font-size="12">motor shaft (pivot)</text>
+  <!-- stowed arm: pointing left across the front -->
+  <line x1="313" y1="231" x2="169" y2="231" stroke="#1b2a34" stroke-width="9"/>
+  <circle cx="169" cy="231" r="7" fill="#c91a09"/>
+  <text x="105" y="214" font-size="12">STOWED: beam points left,</text>
+  <text x="105" y="228" font-size="12" dy="-0">finger hangs here</text>
+  <!-- out arm: pointing forward and a little right (103 deg) -->
+  <line x1="313" y1="231" x2="337" y2="113" stroke="#1b2a34" stroke-width="9" stroke-dasharray="14 8"/>
+  <circle cx="337" cy="113" r="7" fill="#c91a09"/>
+  <text x="352" y="150" font-size="12">OUT: swung 105 degrees</text>
+  <path d="M 190 226 A 124 124 0 0 1 330 125" fill="none" stroke="#e67e22" stroke-width="2" marker-end="url(#a)"/>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#e67e22"/></marker></defs>
+  <!-- handle -->
+  <circle cx="340" cy="100" r="9" fill="#c91a09" stroke="#600"/>
+  <text x="352" y="96" font-size="12">Mission 7 red handle</text>
+  <text x="352" y="110" font-size="12">about 24 cm ahead, 9 cm right of the wheels</text>
+  <!-- dimension: pivot -->
+  <text x="20" y="300" font-size="12" fill="#444">Pivot: 12.5 cm ahead of the wheel axle,</text>
+  <text x="20" y="315" font-size="12" fill="#444">6 cm right of the robot's middle.</text>
+  <text x="20" y="335" font-size="12" fill="#444">Beam: 15 holes = 12 cm.</text>
+
+  <!-- SIDE VIEW -->
+  <text x="520" y="90" font-size="15" font-weight="bold">SIDE VIEW (from the right, robot facing right)</text>
+  <line x1="500" y1="560" x2="890" y2="560" stroke="#444" stroke-width="3"/>
+  <text x="505" y="578" font-size="11" fill="#444">mat</text>
+  <rect x="520" y="425" width="210" height="135" fill="#f4c9d0" stroke="#c91a09" stroke-width="2"/>
+  <text x="625" y="500" text-anchor="middle" font-size="13">ROBOT (about 11.8 cm tall)</text>
+  <rect x="650" y="405" width="80" height="20" fill="#1b2a34" opacity="0.85"/>
+  <text x="610" y="418" font-size="11">top black frame</text>
+  <rect x="660" y="418" width="150" height="8" fill="#1b2a34"/>
+  <text x="662" y="446" font-size="11">shelf: two beams, reach 5 cm past the front</text>
+  <rect x="738" y="382" width="64" height="36" fill="#4a4f55" stroke="#000"/>
+  <text x="770" y="404" text-anchor="middle" font-size="11" fill="#fff">motor C</text>
+  <rect x="764" y="370" width="12" height="12" fill="#1b2a34"/>
+  <text x="782" y="366" font-size="11">arm beam (seen end-on: it points</text>
+  <text x="782" y="380" font-size="11" dy="0">away from you, to the robot's left)</text>
+  <rect x="764" y="370" width="8" height="150" fill="#1b2a34"/>
+  <text x="780" y="470" font-size="11">finger: second 15-hole beam,</text>
+  <text x="780" y="484" font-size="11">hangs straight down</text>
+  <circle cx="768" cy="522" r="8" fill="#c91a09"/>
+  <text x="782" y="526" font-size="11">red tip, about 3-4 cm above the mat</text>
+  <line x1="880" y1="560" x2="880" y2="370" stroke="#888"/>
+  <text x="826" y="320" font-size="12" fill="#444">arm height about 16 cm</text>
+  <text x="500" y="620" font-size="12" fill="#444">Finger length = arm height minus handle height (measure the handle first).</text>
+</svg>
