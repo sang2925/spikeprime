@@ -2,6 +2,8 @@
 
 **Read this first:** this is a plan, not a tested design. Nobody has built it or run it on the robot. The part names and sizes are our best guesses. Picture: [`mission7-arm-blueprint.svg`](mission7-arm-blueprint.svg). The program that goes with it is `gyro-mission6-7-11_routefix_creep_push28_arm.llsp3` (slot 19).
 
+**Illustrated, printable version with a picture for every step:** [`simulator/arm-build.html`](../simulator/arm-build.html) (online: https://sang2925.github.io/spikeprime/simulator/arm-build.html).
+
 ## See it in 3D
 
 Open the simulator, switch on **3D view**, tick **"show the Mission 7 sweeper-arm idea"**, then press **"zoom to the arm"**. The arm is drawn with pieces shaped like real LEGO parts (beams with holes, pins, the medium motor). The yellow numbers match the parts table below: 1 motor, 2a arm, 2b finger, 3 shelf, 4 L-liftarm, 5 shaft piece (under the arm), 7 red tip, 8 brace. Drag to turn it around. It is a picture made from simple shapes, not an official LEGO file, so the motor and small pieces are rough.

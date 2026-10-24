@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission 7 Arm: Build Guide</title>
+    <style>
+        :root {
+            --ink: #1b2a34;
+            --muted: #4a5a66;
+            --line: #cfd8de;
+            --accent: #c8304b;
+            --glow: #ff8c00;
+            --paper: #ffffff;
+            --soft: #f4f7f9;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--soft); line-height: 1.5; }
+        main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+        h1 { font-size: 1.9rem; margin: 0 0 4px; }
+        h2 { font-size: 1.3rem; margin: 32px 0 8px; }
+        p { margin: 8px 0; max-width: 70ch; }
+        .lead { color: var(--muted); }
+        .warn { background: #fff3cd; border: 1px solid #e6c65c; border-radius: 8px; padding: 12px 16px; }
+        table { width: 100%; border-collapse: collapse; background: var(--paper); margin: 8px 0; }
+        th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        th { background: #e9eef1; }
+        td.num { width: 3.2rem; font-weight: bold; }
+        .step { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 20px 0; break-inside: avoid; }
+        .step h3 { margin: 0 0 4px; font-size: 1.15rem; }
+        .step h3 span { display: inline-block; background: var(--ink); color: #fff; border-radius: 6px; padding: 0 10px; margin-right: 8px; }
+        .pic { width: 100%; height: 300px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin: 10px 0; background: #fff; touch-action: none; }
+        .need { color: var(--muted); font-size: 0.95rem; }
+        .glowkey { display: inline-block; width: 14px; height: 14px; background: var(--glow); border-radius: 3px; vertical-align: -2px; }
+        ol, ul { padding-left: 1.3rem; }
+        li { margin: 4px 0; }
+        .badge { display: inline-block; background: #fdebd0; border: 1px solid #f0b66b; border-radius: 12px; padding: 0 8px; font-weight: bold; }
+        a { color: #8f1f36; }
+        @media print {
+            body { background: #fff; }
+            .noprint { display: none; }
+            .step { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <p class="noprint"><a href="index.html">Back to the simulator</a></p>
+    <h1>Mission 7 arm: build guide</h1>
+    <p class="lead">An arm on port C that swings out across the front of the robot and nudges the red handle of the Mission 7 mycelium arm. You can print this page (Ctrl or Cmd + P).</p>
+
+    <div class="warn">
+        <strong>This is a plan, not a tested design.</strong> Nobody has built it or run it on the robot yet. The part names and sizes are guesses. Check the notes at the end before you build, and ask a grown-up before the robot moves.
+    </div>
+
+    <h2>Before you start: two things to measure on the real model</h2>
+    <ol>
+        <li><strong>How high is the red handle above the mat?</strong> (Our guess: 3 to 4 cm.) The finger must end about that high.</li>
+        <li><strong>Lift the real arm by hand.</strong> Which way must it move to be "completely extended"? Write it down.</li>
+    </ol>
+
+    <h2>What you need</h2>
+    <p class="need">The orange <span class="badge">numbers</span> are in the pictures, so you can find each piece.</p>
+    <table>
+        <tr><th>#</th><th>Part</th><th>How many</th></tr>
+        <tr><td class="num">1</td><td>Medium motor (goes in port C)</td><td>1</td></tr>
+        <tr><td class="num">2a</td><td>Black beam, 15 holes (about 12 cm): the <strong>arm</strong></td><td>1</td></tr>
+        <tr><td class="num">2b</td><td>Black beam, 14 or 15 holes: the <strong>finger</strong></td><td>1</td></tr>
+        <tr><td class="num">3</td><td>Black beams, 7 holes: the <strong>shelf</strong></td><td>2</td></tr>
+        <tr><td class="num">4</td><td>L-shaped liftarm (a bent 3x5 or 2x4)</td><td>1</td></tr>
+        <tr><td class="num">5</td><td>A piece with a plus-shaped hole that fits the motor shaft (a gear or a liftarm with a cross hole)</td><td>1</td></tr>
+        <tr><td class="num">7</td><td>Red pin or round red piece</td><td>1</td></tr>
+        <tr><td class="num">8</td><td>Grey beam, 5 holes: the <strong>brace</strong></td><td>1</td></tr>
+        <tr><td class="num"></td><td>Connector pins (blue in the pictures)</td><td>about 10</td></tr>
+    </table>
+    <p class="need">Beams are 8 mm per hole. A 15-hole beam is about 12 cm long.</p>
+
+    <h2>Build steps</h2>
+    <p class="need">Drag a picture to turn it around. <span class="glowkey"></span> The orange glow shows the pieces you add in that step.</p>
+
+    <section class="step">
+        <h3><span>1</span>The arm and the L piece</h3>
+        <div class="pic" id="pic1"></div>
+        <p class="need">Pieces: 2a (arm), 4 (L-shaped liftarm), 2 pins</p>
+        <ol>
+            <li>Lay the 15-hole beam (2a) flat. This is the arm.</li>
+            <li>Put the L-shaped liftarm (4) on top of the arm's end. One leg lies along the arm. The other leg points <strong>down</strong>.</li>
+            <li>Push <strong>two pins</strong> through both pieces. Two pins stop it twisting. One pin alone swings loose.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>2</span>The finger and the red tip</h3>
+        <div class="pic" id="pic2"></div>
+        <p class="need">Pieces: 2b (finger), 7 (red tip), 2 pins</p>
+        <ol>
+            <li>Put the second beam (2b) next to the L's down leg, so it hangs <strong>straight down</strong>.</li>
+            <li>Pin it with <strong>two pins</strong>.</li>
+            <li>Push the red pin (7) into the finger's bottom hole.</li>
+            <li><strong>How long?</strong> The red tip should be 3 to 4 cm above the mat when the arm is on the robot. Finger length is about <em>arm height minus handle height</em>. For example, with the arm 16 cm up and the handle 3.5 cm high, the finger is about 12.5 cm. Use a shorter beam if needed.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>3</span>The motor and shaft piece</h3>
+        <div class="pic" id="pic3"></div>
+        <p class="need">Pieces: 1 (motor), 5 (shaft piece)</p>
+        <ol>
+            <li>Stand the motor flat with its shaft pointing <strong>up</strong>.</li>
+            <li>Push the piece with the plus-shaped hole (5) onto the shaft. It should sit snug.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>4</span>Join the arm to the motor</h3>
+        <div class="pic" id="pic4"></div>
+        <p class="need">Pieces: the arm from step 2, 2 pins</p>
+        <ol>
+            <li>Lay the arm's <strong>first hole</strong> (the end with no L piece) on the shaft piece.</li>
+            <li>Push <strong>two pins</strong> through the arm and the shaft piece.</li>
+            <li>Turn the shaft by hand. The arm must swing level, like a door, without rubbing the motor.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>5</span>The shelf</h3>
+        <div class="pic" id="pic5"></div>
+        <p class="need">Pieces: 3 (two 7-hole beams), pins</p>
+        <ol>
+            <li>Put the two shelf beams (3) side by side under the motor.</li>
+            <li>Pin the motor's side holes to the beams so the motor can't slide or turn.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>6</span>The brace</h3>
+        <div class="pic" id="pic6"></div>
+        <p class="need">Pieces: 8 (5-hole beam), pins</p>
+        <ol>
+            <li>Pin the brace (8) under the front of the shelf, slanting <strong>back and down</strong>.</li>
+            <li>It will join the robot's frame in the next step. It stops the shelf sagging.</li>
+        </ol>
+    </section>
+
+    <section class="step">
+        <h3><span>7</span>Put it on the robot</h3>
+        <div class="pic" id="pic7"></div>
+        <ol>
+            <li>Find the <strong>top-front black frame, on the right side</strong> of the robot.</li>
+            <li>Pin the shelf to that frame. The shelf must reach <strong>about 6 cm past the front</strong> of the frame. The motor shaft should end up <strong>about 12.5 cm ahead of the wheel axle</strong> and <strong>6 cm to the right</strong> of the robot's middle.</li>
+            <li>Pin the bottom end of the brace to the front face of the frame.</li>
+            <li>Turn the shaft by hand until the arm points <strong>left, across the front of the robot</strong>. The finger hangs just <strong>left of the pusher</strong>, inside the robot's width. This is the <strong>resting position</strong>. Start every run from here.</li>
+            <li>Plug the motor into <strong>port C</strong>.</li>
+        </ol>
+        <p class="need">The robot in the picture is a plain block. Your real frame has its own holes, so you may need to adjust where the pins go.</p>
+    </section>
+
+    <h2>Test it (ask a grown-up before the robot moves)</h2>
+    <ol>
+        <li><strong>Motor only.</strong> Download <code>gyro-mission6-7-11_routefix_creep_push28_arm.llsp3</code> to <strong>slot 19</strong> (not slot 0). With the robot lifted off the mat, run it and watch the arm.
+            <ul>
+                <li>It should swing about <strong>105 degrees</strong>, from pointing left to pointing forward and a little right, and then swing back.</li>
+                <li>Swings the wrong way? In the two motor blocks, swap <strong>counterclockwise</strong> and <strong>clockwise</strong>.</li>
+                <li>Doesn't reach far enough? Try <strong>120</strong> in both blocks.</li>
+            </ul>
+        </li>
+        <li><strong>Handle only.</strong> Put the robot where it ends after the leafcutter push. Run the arm. Does the finger touch the red handle? Does it move the arm the way your hand test showed?</li>
+        <li><strong>Whole mission, 5 times.</strong> Write down for each run: did the ant reach the nest, did the leaves stay in, did the mycelium extend, did the window drop, did the robot get home.</li>
+    </ol>
+
+    <h2>What we still don't know</h2>
+    <ul>
+        <li>Whether the arm reaches the handle every time. In the simulator the handle ended up about 7 cm to one side or the other from run to run, and the arm covers only part of that.</li>
+        <li>The real handle height and the right finger length.</li>
+        <li>Whether the real arm needs to be pushed to the right. Your hand test answers that.</li>
+        <li>Whether port C has a motor free on the real robot.</li>
+        <li>Whether the tall shelf is allowed by the equipment rules and robot height rules. We haven't checked.</li>
+    </ul>
+    <p class="noprint">Picture of the whole plan from above and from the side: <a href="../docs/mission7-arm-blueprint.svg">blueprint</a>. More detail: <a href="../docs/mission7-arm-build-guide.md">written guide</a>.</p>
+</main>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="arm-build.js?v=4"></script>
+</body>
+</html>
