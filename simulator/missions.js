@@ -263,10 +263,10 @@
             source: 'measured from the team video gyro_run1.MOV against the launch-area edge marks, about ±2 cm (estimate)' },
         'gyro-mission6-7-11_routefix': { x: 2099, y: 286, heading: 180,
             source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
-        'gyro-mission6-7-11_routefix_creep': { x: 2099, y: 286, heading: 180,
-            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix_creep': { x: 2084.6, y: 288.7, heading: 180,
+            source: 'start set by the coach on 2026-10-24 in Robot Placement: back of the robot on the bold black launch line, its left side on the black tick line (video start was (2099, 286))' },
         'gyro-mission6-7-11_routefix_creep_push28': { x: 2103.1, y: 313.9, heading: 180,
-            source: 'start set by the coach on 2026-10-24 from the simulator cursor (2103.1, 313.9); the other files keep the video start (2099, 286)' },
+            source: 'start set by the coach on 2026-10-24 from the simulator cursor (2103.1, 313.9); routefix_creep has its own coach start, the other files keep the video start (2099, 286)' },
         'gyro-mission6-7-11_routefix_push28': { x: 2099, y: 286, heading: 180,
             source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
     };

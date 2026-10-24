@@ -87,6 +87,7 @@ Things the simulator found in the team's own blocks (simulated, not tested on th
 
 1. **Open the simulator:**
    - From the project root run `python3 tools/serve.py` (it turns off browser caching, so edits show after a normal refresh), then open `http://localhost:8000/simulator/`
+   - To stop it, press Ctrl+C in its terminal. If it runs in the background (or "Port 8000 is already in use"), run `lsof -nP -iTCP:8000 -sTCP:LISTEN` to see its PID, then `kill <PID>`; or in one line `kill $(lsof -t -iTCP:8000 -sTCP:LISTEN)`. Use `kill -9` if it will not stop.
    - You can also double-click `index.html`. Drag-and-drop and the BIOGLOW picture worked from a `file://` page in Chrome launched with `--allow-file-access-from-files`; plain Chrome without that flag was not tested.
    - The left panel shows what you use every run, in order: **View**, **Program**, **Run Controls**, **Robot Placement**, **Sensors and Telemetry**. The setup panels below them (**Drive Settings**, **Table Dimensions**, **Mat Placement**, **Background Image**, **Grid Settings**, **Movement Test**, **Cursor Position**) start closed. Click a title to open or close it. Everything inside a closed panel still works and is still locked during a run.
 
