@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPIKE Prime Route Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=20261024l">
+    <link rel="stylesheet" href="styles.css?v=20261024o">
 </head>
 <body>
     <div id="app">
@@ -25,6 +25,10 @@
                         <button id="btn-3d" aria-pressed="false">3D view: off</button>
                     </div>
                     <p class="note kid-only">Kid view hides the grown-up settings and uses the settings from our robot video. Press it again to see everything.</p>
+                    <div class="control-row">
+                        <label for="show-sweeper">3D: show the Mission 7 sweeper-arm idea (not built; swings out right after the push)</label>
+                        <input type="checkbox" id="show-sweeper">
+                    </div>
                     <p id="note-3d" class="note hidden">3D: drag to look around, scroll to zoom, right-drag to slide. Model heights are guesses. To move the robot by hand, go back to 2D.</p>
                     <button id="btn-fit-view">Fit to View</button>
                     <button id="btn-toggle-grid">Toggle Grid</button>
@@ -382,14 +386,14 @@
         </footer>
     </div>
 
-    <script src="physics.js?v=20261024l"></script>
-    <script src="llsp3.js?v=20261024l"></script>
-    <script src="wordblocks.js?v=20261024l"></script>
-    <script src="missions.js?v=20261024l"></script>
+    <script src="physics.js?v=20261024o"></script>
+    <script src="llsp3.js?v=20261024o"></script>
+    <script src="wordblocks.js?v=20261024o"></script>
+    <script src="missions.js?v=20261024o"></script>
     <script src="vendor/three.min.js"></script>
     <script src="vendor/OrbitControls.js"></script>
-    <script src="models3d.js?v=20261024l"></script>
-    <script src="view3d.js?v=20261024l"></script>
-    <script src="app.js?v=20261024l"></script>
+    <script src="models3d.js?v=20261024o"></script>
+    <script src="view3d.js?v=20261024o"></script>
+    <script src="app.js?v=20261024o"></script>
 </body>
 </html>

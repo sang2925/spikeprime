@@ -232,6 +232,9 @@
         // leafcutter lever stops moving there, so the real push went about 24 of its 30 cm.
         { key: 'm0607stop', name: 'Leafcutter lever: where the real push stopped (from the video, estimate)', missions: [6, 7],
             corners: [[2269, 786], [2244, 823], [2320, 872], [2343, 833]] },
+        // Mission 07's tower: the small square beside the nest on the wireframe (the arm hangs in front of it). A robot or
+        // attachment touching it is a clash; the red handle at its front is where a hook should reach (2026-10-24, estimate).
+        { key: 'm07tower', name: 'Mission 07 tower, beside the nest (estimate)', missions: [7], corners: rect(2494, 736, 2565, 783) },
         { key: 'm0809', name: 'Missions 08 and 09 model, body only (estimate)', missions: [8, 9], corners: rect(947, 680, 1098, 800) },
         { key: 'm10a', name: 'Mission 10 snail habitat, by the top wall next to the tree (estimate)', missions: [10],
             corners: [[1272, 740], [1294, 736], [1307, 758], [1281, 805], [1252, 785], [1250, 760]] },
@@ -262,8 +265,8 @@
             source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
         'gyro-mission6-7-11_routefix_creep': { x: 2099, y: 286, heading: 180,
             source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
-        'gyro-mission6-7-11_routefix_creep_push28': { x: 2099, y: 286, heading: 180,
-            source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
+        'gyro-mission6-7-11_routefix_creep_push28': { x: 2103.1, y: 313.9, heading: 180,
+            source: 'start set by the coach on 2026-10-24 from the simulator cursor (2103.1, 313.9); the other files keep the video start (2099, 286)' },
         'gyro-mission6-7-11_routefix_push28': { x: 2099, y: 286, heading: 180,
             source: 'same start as gyro-mission6-7-11 (team video), about ±2 cm (estimate)' },
     };

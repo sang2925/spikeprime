@@ -27,21 +27,35 @@ const toWorld = ([ix, iy]) => {
     const p = M.imagePxToMatMm(ix, iy, M.IMAGE.matCrop, 0, MAT_W, MAT_H);
     return [MAT_X + MAT_W / 2 + p.x, MAT_Y + MAT_H / 2 + p.y];
 };
-const OUTLINES = M.OBSTACLES.filter((o) => o.key !== 'm0607').map((o) => ({ name: o.key, poly: o.corners.map(toWorld) }));
+const OUTLINES = M.OBSTACLES.filter((o) => o.key !== 'm0607' && o.key !== 'm01line' && o.key !== 'm01map').map((o) => ({ name: o.key, poly: o.corners.map(toWorld) }));
 const BOXES = Object.fromEntries(OUTLINES.map((o) => [o.name, {
     minX: Math.min(...o.poly.map((p) => p[0])), maxX: Math.max(...o.poly.map((p) => p[0])),
     minY: Math.min(...o.poly.map((p) => p[1])), maxY: Math.max(...o.poly.map((p) => p[1])) }]));
-const REACH = Math.hypot(BODY.lengthMm / 2, BODY.widthMm / 2) + 60;   // furthest any part of the robot gets from its box centre, plus the pusher
+const REACH = Math.hypot(BODY.lengthMm / 2, BODY.widthMm / 2) + 160;   // furthest any part of the robot gets from its box centre, plus the pusher
 const isHome = (pose, offsetMm) => P.bodyPolys(pose, { lengthMm: BODY.lengthMm, widthMm: BODY.widthMm, offsetMm })[0].poly
     .every(([x, y]) => Math.hypot(Math.min(x, HOME.x) - HOME.x, y - HOME.y) <= HOME.r);
+
+const HOOK = { name: 'right-front hook', front: 250, back: 100, left: -76, right: -91 };   // --hook: a 15 mm bar on the right side, tip 25 cm ahead of the wheels (the Mission 07 handle is about 24 cm ahead, 9 cm right)
+let withHook = false, swingMode = false;
+const HANDLE = ((p) => toWorld(p))([2528, 834]);   // Mission 07 red handle, estimate from the Field Setup Guide photo
 
 function runOnce(program, startBox, overshoot, offsetMm = 0, creepMm = 0) {
     const h = startBox.headingDeg * Math.PI / 180;
     const sim = P.createSim(P.DEFAULT_PROFILE, { x: startBox.x - offsetMm * Math.cos(h), y: startBox.y - offsetMm * Math.sin(h), headingDeg: startBox.headingDeg });
-    P.setObstacles(sim, OUTLINES, { ...BODY, offsetMm }, TABLE);
+    P.setObstacles(sim, OUTLINES, { ...BODY, parts: withHook ? [...BODY.parts, HOOK] : BODY.parts, offsetMm }, TABLE);
     P.setContactMode(sim, 'push');
     const labels = [];
-    const runner = W.createRunner(program, { plainMoveMode: 'app-guess', turnOvershootDeg: overshoot, turnCreepMm: creepMm, onTopBlock: (t, i) => labels.push(program.stacks[t].items[i].label) });
+    let swing = null;   // --swing: a hook on a port C arm, stowed inside the body for the whole route, swung out once at the end of the push
+    const runner = W.createRunner(program, { plainMoveMode: 'app-guess', turnOvershootDeg: overshoot, turnCreepMm: creepMm, onTopBlock: (t, i) => {
+        labels.push(program.stacks[t].items[i].label);
+        if (swingMode && !swing && labels.slice(0, -1).filter((l) => /^straight \d+(\.\d+)? cm at speed 13$/.test(l)).length === 1) {
+            const polys = P.bodyPolys(sim.pose, { ...sim.body, parts: [...BODY.parts, HOOK] }).filter((r) => r.name === HOOK.name);
+            const hit = sim.obstacles.filter((o) => polys.some((r) => P.polygonGap(r.poly, o.poly) < 1)).map((o) => o.name);
+            const hp = HANDLE, h = sim.pose.headingDeg * Math.PI / 180;
+            const dx = hp[0] - sim.pose.x, dy = hp[1] - sim.pose.y, fwd = dx * Math.cos(h) + dy * Math.sin(h), side = -dx * Math.sin(h) + dy * Math.cos(h);
+            swing = { hit, fwd, side };
+        }
+    } });
     P.startProgram(sim, runner);
     const touches = [];   // { block, name } in order
     const minGap = {};
@@ -72,6 +86,7 @@ function runOnce(program, startBox, overshoot, offsetMm = 0, creepMm = 0) {
         other: touches.filter((t) => !expected(t)).map((t) => `${labels[t.block]}: ${t.name}`),
         home: sim.status === 'stopped' && isHome(sim.pose, offsetMm),
         minD2: minGap.d2,
+        swing,
     };
 }
 
@@ -79,6 +94,13 @@ async function main() {
     const args = process.argv.slice(2);
     const opt = (name) => parseFloat((args.find((a) => a.startsWith(`--${name}=`)) || `--${name}=0`).split('=')[1]);
     const offsetMm = opt('offset'), creepMm = opt('creep');
+    const hookArg = args.find((x) => x.startsWith('--hook'));   // --hook or --hook=<tip mm ahead of the wheels>
+    swingMode = args.includes('--swing');
+    const startArg = args.find((x) => x.startsWith('--start='));   // --start=x,y in mm (box centre), overrides the video start
+    if (startArg) { const [sx, sy] = startArg.split('=')[1].split(',').map(Number); START.x = sx; START.y = sy; }
+    withHook = !!hookArg;
+    if (hookArg && hookArg.includes('=')) HOOK.front = parseFloat(hookArg.split('=')[1]);
+    if (swingMode) { HOOK.name = 'swing-out hook'; if (!hookArg) HOOK.front = 250; }
     const files = args.filter((a) => !a.startsWith('--'));
     if (!files.length) { console.log('Usage: node tools/mission6_7_11_sweep.js <project.llsp3> [...]'); process.exit(1); }
     for (const file of files) {
@@ -91,6 +113,13 @@ async function main() {
                 rs.push(runOnce(program, { x: START.x + dx, y: START.y + dy, headingDeg: START.heading + dh }, over, offsetMm, creepMm));
             }
             const count = (f) => rs.filter(f).length;
+            if (swingMode) {
+                const hits = {};
+                rs.forEach((r) => r.swing.hit.forEach((n) => { hits[n] = (hits[n] || 0) + 1; }));
+                const fw = rs.map((r) => r.swing.fwd), sd = rs.map((r) => r.swing.side);
+                console.log(`${over}° | at the end of the push the handle is ${Math.min(...fw).toFixed(0)}-${Math.max(...fw).toFixed(0)} mm ahead, ${(-Math.max(...sd)).toFixed(0)}-${(-Math.min(...sd)).toFixed(0)} mm right of the wheels | hook tip ${HOOK.front} touches: ${Object.entries(hits).map(([k, v]) => `${k} x${v}`).join('; ') || 'nothing'} | rest of route as without the hook: all good ${count((r) => r.stall && r.bumped && r.home && !r.other.length)}/27`);
+                continue;
+            }
             const others = {};
             rs.forEach((r) => r.other.forEach((o) => { others[o] = (others[o] || 0) + 1; }));
             const good = count((r) => r.stall && r.bumped && r.home && !r.other.length);

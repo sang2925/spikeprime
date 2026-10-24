@@ -212,6 +212,7 @@
             fieldGroup.add(g);
         }
 
+        let sweeperPivot = null;
         function buildRobot(r) {
             clear(robot);
             const body = box(r.length, BODY_H, r.width, 0xe94560);
@@ -229,6 +230,22 @@
                 wheel.rotation.x = Math.PI / 2;
                 wheel.position.set(0, wheelR, side * (r.trackWidth / 2 + 9));
                 robot.add(wheel);
+            }
+            sweeperPivot = null;
+            if (r.sweeper) {   // IDEA, not built: a port C medium motor at the front-right corner turning a 15-hole beam
+                const px = r.sweeper.pivotX, pz = r.width / 2 + 8;
+                const motor = box(56, 32, 48, 0x4a4f55);   // medium motor, roughly 5.6 x 4.8 cm and 3.2 cm tall
+                motor.position.set(px - 10, 24, pz - 22);
+                robot.add(motor);
+                const pivot = new THREE.Group();
+                pivot.position.set(px, 44, pz);
+                const beam = box(r.sweeper.beamLength + 8, 8, 8, 0x1b2a34);   // black 15-hole liftarm
+                beam.position.set(-r.sweeper.beamLength / 2 + 4, 0, 0);       // starts pointing straight back
+                const hand = box(10, 10, 10, 0xc91a09);                       // red end pin
+                hand.position.set(-r.sweeper.beamLength + 2, 0, 0);
+                pivot.add(beam, hand);
+                robot.add(pivot);
+                sweeperPivot = pivot;
             }
             for (const p of r.parts) {   // attachments: front/back along the robot, left positive
                 const part = box(p.front - p.back, PUSHER_H, p.left - p.right, 0x9a9a9a);
@@ -267,10 +284,11 @@
                 buildField(d);
                 if (first) resetCamera();
             }
-            const r = d.robot, rk = JSON.stringify([r.length, r.width, r.offset, r.trackWidth, r.wheelDiameter, r.parts]);
+            const r = d.robot, rk = JSON.stringify([r.length, r.width, r.offset, r.trackWidth, r.wheelDiameter, r.parts, r.sweeper && [r.sweeper.pivotX, r.sweeper.beamLength]]);
             if (rk !== robotKey) { robotKey = rk; buildRobot(r); }
             robot.position.copy(toV(r.x, r.y));
             robot.rotation.y = r.headingDeg * Math.PI / 180;
+            if (sweeperPivot) sweeperPivot.rotation.y = Math.PI * (r.sweeper.out ? 1 : 0);   // out = pointing forward after swinging along the right side
             for (const list of Object.values(movers)) {
                 for (const it of list) {
                     it.target = Math.max(0, Math.min(1, (d.modelState || {})[it.state] || 0));

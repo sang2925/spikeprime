@@ -1901,6 +1901,8 @@ function resizeCanvas() {
 // ============================================================================
 
 const btn3d = document.getElementById('btn-3d');
+const sweeperInput = document.getElementById('show-sweeper');
+sweeperInput.addEventListener('change', () => render());
 const view3dEl = document.getElementById('view3d');
 let view3d = null;
 
@@ -1919,7 +1921,8 @@ function update3d() {
         modelState: { m11: missionState.m11 ? 1 : 0, m0607: missionState.m0607 },
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
-            parts: sim.body ? sim.body.parts : [] },
+            parts: sim.body ? sim.body.parts : [],
+            sweeper: sweeperInput.checked ? { pivotX: 125, beamLength: 120, out: blocksStarted === 13 } : null },   // out during the step after the push (back 6), stowed otherwise
         path: sim.path,
         showPath: state.pathVisible,
     });
