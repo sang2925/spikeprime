@@ -21,7 +21,7 @@ This season's game is **BIOGLOW**. These programs try three missions:
 Two buttons at the top make it easier:
 
 - **Kid view** hides all the grown-up settings and turns on the video match settings for you.
-- **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. (The models' heights are guesses.)
+- **3D view** shows the table, the models and the robot in 3D. Drag to look around, scroll to zoom. The leafcutter (Missions 06 and 07) and Mission 11 are built from LEGO bricks, copied by eye from the official building instructions, so they look like the real models. The other models are simple see-through blocks.
 
 The simulator is a guess. It is like a weather forecast: useful, but the real robot on the real mat always has the final say.
 

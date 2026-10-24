@@ -1802,13 +1802,40 @@ function update3d() {
         table: { w: TABLE_INTERIOR_X, h: TABLE_INTERIOR_Y },
         mat: { x: state.matX, y: state.matY, w: MAT_WIDTH, h: MAT_HEIGHT, rotationDeg: state.matRotation },
         background: bg,
-        obstacles: sim.obstacles,
+        obstacles: sim.obstacles.filter((o) => !MODEL_OUTLINES.has(o.name)),   // these two are drawn as LEGO models instead
+        models: models3dWorld(),
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
             parts: sim.body ? sim.body.parts : [] },
         path: sim.path,
         showPath: state.pathVisible,
     });
+}
+
+// The two LEGO-style models (models3d.js) in table mm, recomputed when the mat moves
+const MODEL_OUTLINES = new Set(BioglowMissions.OBSTACLES.filter((o) => ['m11', 'm0607'].includes(o.key)).map((o) => o.name));
+let models3dCache = { key: '', list: [] };
+function models3dWorld() {
+    const key = `${state.matX},${state.matY},${state.matRotation}`;
+    if (models3dCache.key === key) return models3dCache.list;
+    const W = ([x, y]) => wireframePxToWorld(x, y);
+    const dir = (p, v) => { const a = W(p), b = W([p[0] + v[0] * 100, p[1] + v[1] * 100]), l = Math.hypot(b[0] - a[0], b[1] - a[1]); return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+    const list = Models3D.MODELS.map((m) => {
+        const pieces = Models3D.pieces(m).map((p) => {
+            const q = { ...p };
+            if (p.poly) q.poly = p.poly.map(W);
+            if (p.pts) q.pts = p.pts.map(W);
+            for (const k of ['c', 'a', 'b']) if (p[k]) q[k] = W(p[k]);
+            if (p.axis) q.axis = dir(p.c, p.axis);
+            if (p.along) q.along = dir(p.a, p.along);
+            return q;
+        });
+        const xs = pieces.filter((p) => p.poly).flatMap((p) => p.poly);
+        const labelAt = [xs.reduce((t, p) => t + p[0], 0) / xs.length, xs.reduce((t, p) => t + p[1], 0) / xs.length];
+        return { key: m.key, label: m.label, pieces, labelAt };
+    });
+    models3dCache = { key, list };
+    return list;
 }
 
 function set3d(on) {

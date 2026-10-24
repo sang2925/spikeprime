@@ -113,6 +113,8 @@
             }
             fieldGroup.add(mat);
 
+            for (const m of d.models || []) buildModel(m);
+
             for (const o of d.obstacles) {
                 const shape = new THREE.Shape(o.poly.map(([x, y]) => new THREE.Vector2(x, y)));
                 const geo = new THREE.ExtrudeGeometry(shape, { depth: MODEL_H, bevelEnabled: false });
@@ -122,6 +124,63 @@
                 const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xe94560 }));
                 fieldGroup.add(edges);
             }
+        }
+
+        // LEGO-style mission models (models3d.js), already in table mm: x, y on the mat, z up
+        const studGeo = new THREE.CylinderGeometry(2.4, 2.4, 1.8, 12);
+        function lambert(color, opacity) {
+            return new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity: opacity ?? 1 });
+        }
+        function buildModel(m) {
+            const g = new THREE.Group();
+            for (const p of m.pieces) {
+                if (p.kind === 'prism') {
+                    const geo = new THREE.ExtrudeGeometry(new THREE.Shape(p.poly.map(([x, y]) => new THREE.Vector2(x, y))), { depth: p.z1 - p.z0, bevelEnabled: false });
+                    geo.rotateX(-Math.PI / 2);
+                    const mesh = new THREE.Mesh(geo, lambert(p.color, p.opacity));
+                    mesh.position.y = p.z0;
+                    g.add(mesh);
+                } else if (p.kind === 'cyl') {
+                    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.r2, p.r, p.z1 - p.z0, 20), lambert(p.color));
+                    mesh.position.copy(toV(p.c[0], p.c[1], (p.z0 + p.z1) / 2));
+                    g.add(mesh);
+                } else if (p.kind === 'disc') {   // a wheel standing on edge, its axle along p.axis (a unit vector on the mat)
+                    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.thick, 24), lambert(p.color));
+                    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(p.axis[0], 0, -p.axis[1]));
+                    mesh.position.copy(toV(p.c[0], p.c[1], p.z));
+                    g.add(mesh);
+                } else if (p.kind === 'sphere') {
+                    const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.r, 16, 12), lambert(p.color));
+                    mesh.position.copy(toV(p.c[0], p.c[1], p.z));
+                    g.add(mesh);
+                } else if (p.kind === 'beam') {   // a bar from a to b; flatten = a thin slab (leaves), facing along p.along
+                    const a = toV(p.a[0], p.a[1], p.az), b = toV(p.b[0], p.b[1], p.bz), len = a.distanceTo(b);
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.flatten ? 2 : p.w, len, p.w), lambert(p.color));
+                    mesh.position.copy(a).add(b).multiplyScalar(0.5);
+                    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+                    if (p.along) mesh.rotateY(Math.atan2(p.along[1], p.along[0]));
+                    g.add(mesh);
+                } else if (p.kind === 'studs') {
+                    const inst = new THREE.InstancedMesh(studGeo, lambert(p.color), p.pts.length);
+                    const mtx = new THREE.Matrix4();
+                    p.pts.forEach(([x, y], i) => inst.setMatrixAt(i, mtx.makeTranslation(x, p.z + 0.9, -y)));
+                    g.add(inst);
+                }
+            }
+            // floating label so kids can see which mission it is
+            const c = document.createElement('canvas');
+            c.width = 256; c.height = 96;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#1e8e3e';
+            ctx.beginPath(); ctx.roundRect(4, 4, 248, 88, 44); ctx.fill();
+            ctx.lineWidth = 6; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 56px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(m.label, 128, 52);
+            const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+            label.scale.set(120, 45, 1);
+            label.position.copy(toV(m.labelAt[0], m.labelAt[1], 170));
+            g.add(label);
+            fieldGroup.add(g);
         }
 
         function buildRobot(r) {
@@ -171,7 +230,7 @@
         /** d: { table, mat, background, obstacles, robot, path, showPath } (see app.js) */
         function update(d) {
             const key = JSON.stringify([d.table, d.mat, d.background && [d.background.src, d.background.crop, d.background.orientation, d.background.opacity, d.background.fitW],
-                d.obstacles.map((o) => o.poly)]);
+                d.obstacles.map((o) => o.poly), (d.models || []).map((m) => m.key)]);
             if (key !== fieldKey) {
                 const first = !fieldKey;
                 fieldKey = key;
@@ -189,7 +248,15 @@
         }
 
         resize();
-        return { update, resize, resetCamera, canvas: renderer.domElement };
+        /** Look at table point (x, y) mm from about dist mm away, from the front-right */
+        function focus(x, y, dist = 600) {
+            controls.target.copy(toV(x, y, 40));
+            camera.position.copy(toV(x + dist * 0.5, y - dist * 0.7, dist * 0.6));
+            controls.update();
+            draw();
+        }
+
+        return { update, resize, resetCamera, focus, canvas: renderer.domElement };
     }
 
     root.View3D = { create };
