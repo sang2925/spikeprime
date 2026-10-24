@@ -1911,6 +1911,12 @@ function armOut() {
     return at >= 0 ? blocksStarted === at + 1 : blocksStarted === 13;
 }
 sweeperInput.addEventListener('change', () => render());
+document.getElementById('btn-zoom-arm').addEventListener('click', () => {   // look at the arm from the front-right
+    if (!view3d) return;
+    const h = state.robotHeading * Math.PI / 180, f = 125, side = 60;   // mm ahead of and to the right of the wheels
+    const x = state.robotX + f * Math.cos(h) + side * Math.sin(h), y = state.robotY + f * Math.sin(h) - side * Math.cos(h);
+    view3d.focus(x, y, 640);
+});
 const view3dEl = document.getElementById('view3d');
 let view3d = null;
 
@@ -1930,7 +1936,7 @@ function update3d() {
         robot: { x: state.robotX, y: state.robotY, headingDeg: state.robotHeading, length: state.robotLength, width: state.robotWidth,
             offset: state.robotOffset || 0, trackWidth: sim.profile.trackWidthMm || 112, wheelDiameter: sim.profile.wheelDiameterMm || 65,
             parts: sim.body ? sim.body.parts : [],
-            sweeper: sweeperInput.checked ? { pivotX: 125, beamLength: 120, fingerLength: 120, out: armOut() } : null },
+            sweeper: sweeperInput.checked ? { pivotX: 125, beamLength: 120, fingerLength: 112, out: armOut() } : null },
         path: sim.path,
         showPath: state.pathVisible,
     });

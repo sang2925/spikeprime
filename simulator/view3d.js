@@ -213,6 +213,33 @@
         }
 
         let sweeperPivot = null;
+
+        // A Technic liftarm 1 x n (8 mm wide and thick, holes 8 mm apart), lying along x with its middle at the origin
+        function liftarm(n, color) {
+            const g = new THREE.Group(), len = n * 8, mat = new THREE.MeshLambertMaterial({ color });
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(len - 8, 8, 8), mat); g.add(bar);
+            for (const sx of [-1, 1]) { const cap = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 8, 14), mat); cap.position.x = sx * (len / 2 - 4); g.add(cap); }
+            const hole = new THREE.MeshBasicMaterial({ color: 0x050505 });
+            for (let i = 0; i < n; i++) { const h = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 8.6, 10), hole); h.rotation.x = Math.PI / 2; h.position.x = -len / 2 + 4 + 8 * i; g.add(h); }
+            return g;
+        }
+        function pegAt(color) {   // a connector pin sticking through a hole (along z)
+            const g = new THREE.Group();
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 14, 10), new THREE.MeshLambertMaterial({ color })); g.add(stem);
+            const head = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 2, 10), new THREE.MeshLambertMaterial({ color })); head.position.y = 7; g.add(head);
+            return g;
+        }
+        function numberTag(text) {   // a small numbered disc that always faces the camera
+            const c = document.createElement('canvas'); c.width = 96; c.height = 96;
+            const g = c.getContext('2d');
+            g.fillStyle = '#feca57'; g.beginPath(); g.arc(48, 48, 44, 0, 7); g.fill();
+            g.lineWidth = 6; g.strokeStyle = '#1b2a34'; g.stroke();
+            g.fillStyle = '#1b2a34'; g.font = 'bold 50px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 48, 52);
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+            sp.scale.set(20, 20, 1);
+            return sp;
+        }
+
         function buildRobot(r) {
             clear(robot);
             const body = box(r.length, BODY_H, r.width, 0xe94560);
@@ -232,25 +259,50 @@
                 robot.add(wheel);
             }
             sweeperPivot = null;
-            if (r.sweeper) {   // IDEA, not built: a port C medium motor on a shelf off the top-front black frame, turning a beam with a finger
+            if (r.sweeper) {   // IDEA, not built: real LEGO shapes, numbers match docs/mission7-arm-build-guide.md
                 const px = r.sweeper.pivotX, pz = 60, deck = BODY_H + 8;
-                const shelf = box(px + 30 - 30, 8, 36, 0x1b2a34);   // two black beams reaching forward from the top-front frame
-                shelf.scale.set(1, 1, 1);
-                shelf.position.set((px + 30 + 30) / 2, deck + 4, pz);
-                robot.add(shelf);
-                const motor = box(56, 32, 48, 0x4a4f55);   // medium motor, roughly 5.6 x 4.8 cm and 3.2 cm tall, lying flat, shaft up
+                const L = 8 * 15;                       // 15-hole beam, 12 cm
+                const dark = 0x1b2a34, grey = 0x6c6e68, light = 0xdcdcdc;
+                const tag = (parent, n, x, y, z) => { const t = numberTag(n); t.position.set(x, y, z); parent.add(t); };
+                // 3: shelf, two 7-hole beams side by side, reaching forward from the top-front frame
+                for (const dz of [-8, 8]) { const sh = liftarm(7, dark); sh.position.set(px + 12 - 24, deck + 4, pz + dz); robot.add(sh); }
+                tag(robot, '3', px - 60, deck + 26, pz + 22);
+                // 8: diagonal brace from the shelf front down to the frame's front face
+                const brace = liftarm(5, grey); brace.rotation.z = Math.atan2(30, 40); brace.position.set(px - 8, deck - 14, pz - 16); robot.add(brace);
+                tag(robot, '8', px - 40, deck - 30, pz - 36);
+                // 1: medium motor lying flat, shaft up
+                const motor = new THREE.Group();
+                motor.add(box(56, 32, 48, light));
+                const stripe = box(58, 6, 50, 0x9a9a9a); stripe.position.y = 4; motor.add(stripe);
+                const cap = box(20, 6, 20, 0x333333); cap.position.set(0, 19, 0); motor.add(cap);
+                const axle = box(5, 12, 1.8, 0x111111); axle.position.set(0, 25, 0); const axle2 = box(1.8, 12, 5, 0x111111); axle2.position.set(0, 25, 0); motor.add(axle, axle2);
                 motor.position.set(px, deck + 8 + 16, pz);
                 robot.add(motor);
+                tag(robot, '1', px + 4, deck + 8 + 52, pz + 34);
+                // the swinging part: built pointing straight back from the shaft, turned by the program drawing
                 const pivot = new THREE.Group();
-                pivot.position.set(px, deck + 8 + 32 + 6, pz);
-                const L = r.sweeper.beamLength;
-                const beam = box(L + 8, 8, 8, 0x1b2a34);                    // black 15-hole liftarm, starts pointing straight back
-                beam.position.set(-L / 2 + 4, 0, 0);
-                const finger = box(8, r.sweeper.fingerLength, 8, 0x1b2a34); // second beam hanging down from the tip to near the mat
-                finger.position.set(-L, -r.sweeper.fingerLength / 2, 0);
-                const tip = box(10, 10, 10, 0xc91a09);                      // red end pin
-                tip.position.set(-L, -r.sweeper.fingerLength, 0);
-                pivot.add(beam, finger, tip);
+                pivot.position.set(px, deck + 8 + 32 + 10, pz);
+                // 5: piece with a plus hole on the shaft (a gear)
+                const gear = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 4, 20), new THREE.MeshLambertMaterial({ color: grey })); gear.position.y = -6; pivot.add(gear);
+                // 2a: the arm, a 15-hole beam, first hole on the shaft
+                const arm = liftarm(15, dark); arm.position.set(-(L / 2 - 4), 0, 0); pivot.add(arm);
+                tag(pivot, '2a', -50, 14, 0);
+                // 4: L-shaped liftarm at the tip, one leg along the arm, one leg hanging down
+                const tipX = -(L - 8);
+                const legA = liftarm(5, grey); legA.position.set(tipX + 16, 8, 0); pivot.add(legA);
+                const legB = liftarm(3, grey); legB.rotation.z = Math.PI / 2; legB.position.set(tipX, -4, 0); pivot.add(legB);
+                tag(pivot, '4', tipX + 30, 22, 0);
+                // pins joining them (two on each joint)
+                for (const dx of [0, 8]) { const pin = pegAt(0x2b6cb0); pin.position.set(tipX + dx, 8, 6); pin.rotation.x = Math.PI / 2; pivot.add(pin); }
+                // 2b: finger, a second 15-hole beam standing vertical beside the L's down leg, ending 3-4 cm above the mat
+                const fingerHoles = Math.max(3, Math.round(r.sweeper.fingerLength / 8));
+                const finger = liftarm(fingerHoles, dark); finger.rotation.z = Math.PI / 2; finger.position.set(tipX, -4 - (fingerHoles * 8) / 2 + 12, 8); pivot.add(finger);
+                for (const dy of [0, -8]) { const pin = pegAt(0x2b6cb0); pin.position.set(tipX, -4 + dy, 4); pin.rotation.x = Math.PI / 2; pivot.add(pin); }
+                tag(pivot, '2b', tipX - 18, -40, 8);
+                // 7: red tip pin at the finger's bottom hole
+                const tipPin = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 14, 12), new THREE.MeshLambertMaterial({ color: 0xc91a09 }));
+                tipPin.rotation.x = Math.PI / 2; tipPin.position.set(tipX, -4 - (fingerHoles * 8) + 16, 10); pivot.add(tipPin);
+                tag(pivot, '7', tipX - 18, -4 - fingerHoles * 8 + 22, 14);
                 robot.add(pivot);
                 sweeperPivot = pivot;
             }
