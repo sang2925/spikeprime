@@ -134,4 +134,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { runOnce, START };
+module.exports = { runOnce, START, OUTLINES, BODY, TABLE };

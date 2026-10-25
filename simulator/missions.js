@@ -267,6 +267,8 @@
             source: 'start set by the coach on 2026-10-24 in Robot Placement: back of the robot on the bold black launch line, its left side on the black tick line (video start was (2099, 286))' },
         'gyro-mission6-7-11_routefix_creep_push28': { x: 2084.6, y: 288.7, heading: 180,
             source: 'same coach start as routefix_creep (2026-10-24): back on the bold black launch line, left side on the black tick line (before: (2103.1, 313.9) from the cursor; video start (2099, 286))' },
+        'gyro-mission6-7-11_routefix_creep_push28_back10': { x: 2084.6, y: 288.7, heading: 180,
+            source: 'same coach start as routefix_creep_push28 (only step 8 differs, 2026-10-25)' },
         'gyro-mission6-7-11_routefix_creep_push28_arm': { x: 2103.1, y: 313.9, heading: 180,
             source: 'same start as gyro-mission6-7-11_routefix_creep_push28 (set by the coach on 2026-10-24)' },
         'gyro-mission6-7-11_routefix_push28': { x: 2099, y: 286, heading: 180,
