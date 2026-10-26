@@ -1,11 +1,10 @@
-"""Build turn-test.llsp3 from Team Template.llsp3. All sources are read only.
+"""Build turn-test.llsp3 (version 2, 2026-10-26) from Team Template.llsp3. All sources are read only.
 
-The robot turns right 90 three times with the OLD turn and three times with the NEW turn. After each turn it waits
-1 second and shows on the hub how far it really turned (yaw, rounded). Reading: shown number minus 90 = how far
-that turn went past.
-  - OLD turn: copied exactly from the original team project (Harrison_Lucas_Kai_leafcutter_uncover.llsp3).
-  - NEW turn: copied exactly from gyro-mission6-7-11.llsp3 (with its heading and error variables and comments).
-The template's own turn My Block is replaced by the NEW one; its straight My Block is kept (not used here).
+The robot turns right 90 FOUR times in a row (a full circle) with the turn from gyro-mission6-7-11_simpleturn.llsp3
+(constant slow speed). After each turn it waits 1 second and shows on the hub how far it really turned (yaw, rounded).
+Reading: shown number minus 90 = how far that turn went past. A robot that does not slide ends where it started.
+The first version (old turn vs new turn, 6 half-circle turns) is archived-llsp3/turn-test_old_vs_new.llsp3.
+The template's own turn My Block is replaced by the simple-turn one; its straight My Block is kept (not used here).
 Block formats come from real SPIKE exports: the team files, samples/format-sample.llsp3 and
 samples/write-sample.llsp3 (write, round, repeat).
 
@@ -18,34 +17,27 @@ from build_gyro_mission6_7_11 import comment_height, new_id   # same id style an
 from mission6_7_11_comments import TEXT as MISSION_TEXT        # the full WORDS TO KNOW from gyro-mission6-7-11
 
 TEMPLATE = 'Team Template.llsp3'
-OLD_SRC = 'archived-llsp3/Harrison_Lucas_Kai_leafcutter_uncover.llsp3'   # archived 2026-10-24
-NEW_SRC = 'archived-llsp3/gyro-mission6-7-11.llsp3'
+NEW_SRC = 'gyro-mission6-7-11_simpleturn.llsp3'
 OUT = 'turn-test.llsp3'
 
 TEXT = {
-    'cSetup': """TURN TEST: how far do our turns REALLY go?
+    'cSetup': """TURN TEST: does the robot turn without sliding?
 
-The robot turns right 90 degrees 6 times:
-  3 times with the OLD turn (from our first leafcutter program)
-  3 times with the NEW turn (from gyro-mission6-7-11)
+The robot turns right 90 degrees FOUR times (a full circle) with our new slow turn (12% speed).
 After each turn it stops, waits 1 second, and shows a number on the hub: how far it really turned.
+
+BEFORE: put the robot on the mat in an empty spot. Stick tape at its 4 corners, like a box around it.
+AFTER: is the robot still inside the box? If it ended up behind the box, it slid.
 
 Write every number down. Number minus 90 = how far the turn went past.
   Example: the hub shows 93. 93 - 90 = 3 degrees too far.
+  Numbers about the same every time = a steady turn.
 
-Before you press start: a grown-up says OK, the robot is on the floor or the mat, and nothing is within 30 cm of it.
-The hub shows OLD before the first 3 turns and NEW before the last 3.""",
+A grown-up says OK first, and nothing is within 30 cm of the robot.
+The hub shows GO before the first turn.""",
 
-    'cOldTurn': """MY BLOCK: OLD TURN (degrees)
-Copied exactly from our first leafcutter program, the one that worked on the mat.
-It spins slowly (5.2% speed) until the gyro says it has turned far enough, then stops.
-It sets yaw to 0 itself, so the number on the hub is just this turn.""",
-
-    'cPart1': """PART 1: OLD TURN, 3 TIMES
-old turn 90, wait 1 second (so the robot stops rolling), then show how far it turned, and wait 3 seconds so you can read it.""",
-
-    'cPart2': """PART 2: NEW TURN, 3 TIMES
-Set yaw angle to 0 first, so the number on the hub is just this turn. Then the same as part 1.""",
+    'cPart1': """PART 1: 4 TURNS
+Set yaw angle to 0, wait a moment, turn right 90, wait 1 second so the robot stops rolling, then show how far it turned. Wait 3 seconds so you can read it. Then again, 4 times in all.""",
 
     'cShow': """WRITE (ROUND (YAW ANGLE))
 Shows how far the robot really turned, rounded to a whole number. The light matrix scrolls it.
@@ -180,14 +172,13 @@ class Stack:
 def main():
     if os.path.exists(OUT):
         sys.exit(f'{OUT} already exists. Move it away first (never overwritten without approval).')
-    sources = {p: open(p, 'rb').read() for p in (TEMPLATE, OLD_SRC, NEW_SRC)}   # read everything before any write
+    sources = {p: open(p, 'rb').read() for p in (TEMPLATE, NEW_SRC)}   # read everything before any write
     _, outer, inner, project, t = read(TEMPLATE)
-    _, _, _, _, old = read(OLD_SRC)
     _, _, _, _, new = read(NEW_SRC)
     manifest = json.loads(outer.read('manifest.json'))
     B, C = t['blocks'], t['comments']
 
-    # ---- replace the template's turn with the NEW turn from gyro-mission6-7-11 ----------------------------------
+    # ---- replace the template's turn with the simple turn from gyro-mission6-7-11_simpleturn ----------------------------------
     tmpl_turn = procedure(t, 'turn %s')
     at = (B[tmpl_turn]['x'], B[tmpl_turn]['y'])
     gone = reachable(B, tmpl_turn, set())
@@ -201,9 +192,6 @@ def main():
         t['variables'][var_map[vid]] = [name, 0]
     new_turn = copy_procedure(new, procedure(new, 'turn %s'), t, var_map, at)
 
-    # ---- add the OLD turn from the original project, renamed 'old turn' --------------------------------------
-    old_turn = copy_procedure(old, procedure(old, 'turn %s'), t, {}, (at[0], at[1] + 1100), proccode='old turn %s')
-    old_arg = json.loads(B[B[old_turn]['inputs']['custom_block'][1]]['mutation']['argumentids'])[0]
     new_arg = json.loads(B[B[new_turn]['inputs']['custom_block'][1]]['mutation']['argumentids'])[0]
 
     # ---- move the (unused) straight My Block and its comments below the longer main script ------------------
@@ -222,10 +210,8 @@ def main():
     assert B[speed]['next'] is None, 'template main script changed: expected it to end at set movement speed'
     s = Stack(B)
     show1 = s.write_yaw()
-    part1 = s.repeat(3, [s.call('old turn %s', old_arg, 90), s.wait(1), show1, s.wait(3)])
-    part2 = s.repeat(3, [s.block('flippersensors_resetYaw'), s.wait(0.2), s.call('turn %s', new_arg, 90), s.wait(1),
-                         s.write_yaw(), s.wait(3)])
-    s.chain(speed, [s.write_text('OLD'), s.wait(2), part1, s.write_text('NEW'), s.wait(2), part2])
+    part1 = s.repeat(4, [s.block('flippersensors_resetYaw'), s.wait(0.2), s.call('turn %s', new_arg, 90), s.wait(1), show1, s.wait(3)])
+    s.chain(speed, [s.write_text('GO'), s.wait(2), part1])
 
     # ---- comments ------------------------------------------------------------------------------------------
     def put(cid, block_id, x, y_bottom, width=400):
@@ -236,8 +222,7 @@ def main():
     setup = C['cSetup']
     put('cSetup', setup['blockId'], setup['x'], setup['y'] + setup['height'], setup['width'])   # grows upward
     # the template's WORDS TO KNOW has no heading / error: use the mission's full list (keeps its top-left corner)
-    words = MISSION_TEXT['cWords'].replace("Ours are 'turn' and 'straight'.", "Ours are 'turn', 'old turn' and 'straight'.")
-    assert words != MISSION_TEXT['cWords'], 'WORDS TO KNOW wording changed: update the My Block line here'
+    words = MISSION_TEXT['cWords']
     C['cWords'].update(text=words, height=comment_height(words, C['cWords']['width']))
     # which wheel motor B drives has not been checked on the robot (AGENTS.md): no "left wheel" claim (keeps its bottom)
     zero = C['cStraight_zero']
@@ -246,10 +231,8 @@ def main():
     zero['text'] = zero['text'].replace(old_line, 'Motor B turns one of our two drive wheels. Its "relative position" counts how far that wheel has turned')
     h = comment_height(zero['text'], zero['width'])
     zero.update(y=zero['y'] + zero['height'] - h, height=h)
-    put('cOldTurn', old_turn, B[old_turn]['x'], B[old_turn]['y'] - 40)
     put('cPart1', part1, -940, 400)
     put('cShow', show1, -940, 760)
-    put('cPart2', part2, -940, 1120)
 
     # ---- the light matrix blocks need the flipperlight extension in both lists ---------------------------------
     for lst in (project['extensions'], manifest['extensions']):
@@ -275,7 +258,7 @@ def main():
         assert c['blockId'] is None or B[c['blockId']].get('comment') == cid, cid
     protos = {B[k]['mutation']['proccode']: json.loads(B[k]['mutation']['argumentids'])
               for k, b in B.items() if isinstance(b, dict) and b['opcode'] == 'procedures_prototype'}
-    assert sorted(protos) == ['old turn %s', 'straight %s cm at speed %s', 'turn %s'], protos
+    assert sorted(protos) == ['straight %s cm at speed %s', 'turn %s'], protos
     for b in B.values():
         if isinstance(b, dict) and b['opcode'] == 'procedures_call':
             assert json.loads(b['mutation']['argumentids']) == protos[b['mutation']['proccode']], b['mutation']

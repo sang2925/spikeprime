@@ -296,19 +296,21 @@ test('gyro-mission6-7-11 with the team robot settings stays inside the table wal
     assert.equal(sim.status, 'stopped', sim.contact || sim.fault);
 });
 
-test('turn-test: 3 old turns then 3 new turns, and the hub shows how far each one went', async () => {
+test('turn-test: four simple turns (a full circle), and the hub shows how far each one went', async () => {
     const program = W.compileProgram(await loadTarget('turn-test.llsp3'));
     const shows = (turnOvershootDeg) => {
         const { sim, runner } = runProgram(program, { turnOvershootDeg });
         assert.equal(sim.status, 'stopped');
         assert.ok(!runner.notes.some((n) => /not simulated|no definition/.test(n.text)), 'every block is simulated');
-        near(sim.pose.headingDeg - START.headingDeg, -6 * 90 - 6 * turnOvershootDeg, 7, 'six right turns of about 90');
+        near(sim.pose.headingDeg - START.headingDeg, -4 * 90 - 4 * turnOvershootDeg, 7, 'four right turns of about 90');
         return runner.notes.filter((n) => /^hub shows/.test(n.text)).map((n) => n.text.match(/"(.*)"/)[1]);
     };
-    // ideal motors: the old turn stops just past 90, the new one within 1 degree of it (with track width 113 it rounds to 90, was 89 with 112)
-    assert.deepEqual(shows(0), ['OLD', '90', '90', '90', 'NEW', '90', '90', '90']);
+    const ideal = shows(0);
+    assert.deepEqual(ideal.slice(0, 1), ['GO']);
+    assert.equal(ideal.length, 5);
+    ideal.slice(1).forEach((v) => near(+v, 90, 1.5, 'ideal motors turn about 90'));
     // a turn that coasts 3 degrees shows 3 more, so the hub number minus 90 is the overshoot
-    assert.deepEqual(shows(3), ['OLD', '93', '93', '93', 'NEW', '93', '93', '93']);
+    shows(3).slice(1).forEach((v) => near(+v, 93, 1.5, 'coasting 3 degrees shows about 93'));
 });
 
 test('turn records: no turn in the team programs asks the wheels to roll forward or backward (code is not the creep)', async () => {
