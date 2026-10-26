@@ -1849,8 +1849,8 @@ document.getElementById('btn-video-match').addEventListener('click', () => {
     if (SimPhysics.isActive(sim)) return;
     programMoveModeInput.value = 'app-guess';
     driveTurnOvershootInput.value = '2';
-    driveTurnCreepInput.value = '60';
-    robotOffsetInput.value = '0';
+    driveTurnCreepInput.value = '58';   // turn 85 re-fit 2026-10-25
+    robotOffsetInput.value = '8';       // spin point about 8 mm behind the body's middle (re-fit 2026-10-25)
     robotOffsetInput.dispatchEvent(new Event('input'));
     markPresetCustom();
     tableWallsInput.checked = true;

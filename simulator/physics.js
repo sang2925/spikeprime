@@ -22,7 +22,7 @@
     // Defaults. Only wheel diameter comes from a team record; the rest are examples/estimates.
     const DEFAULT_PROFILE = {
         wheelDiameterMm: 65.3,         // team record: about 20.5 cm per wheel turn (205 / pi)
-        trackWidthMm: 112,             // example, not measured
+        trackWidthMm: 113,             // coach tape measure 2026-10-25 (about ±5 mm)
         gearRatio: 1,                  // example: direct drive assumed
         maxMotorDegPerS: 1050,         // estimate: about 10.5 deg/s per 1%, unmeasured
         leftMotorSign: 1,              // example: not set from the robot

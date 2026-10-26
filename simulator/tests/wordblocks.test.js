@@ -305,10 +305,10 @@ test('turn-test: 3 old turns then 3 new turns, and the hub shows how far each on
         near(sim.pose.headingDeg - START.headingDeg, -6 * 90 - 6 * turnOvershootDeg, 7, 'six right turns of about 90');
         return runner.notes.filter((n) => /^hub shows/.test(n.text)).map((n) => n.text.match(/"(.*)"/)[1]);
     };
-    // ideal motors: the old turn stops just past 90, the new one stops within 1 degree before it
-    assert.deepEqual(shows(0), ['OLD', '90', '90', '90', 'NEW', '89', '89', '89']);
+    // ideal motors: the old turn stops just past 90, the new one within 1 degree of it (with track width 113 it rounds to 90, was 89 with 112)
+    assert.deepEqual(shows(0), ['OLD', '90', '90', '90', 'NEW', '90', '90', '90']);
     // a turn that coasts 3 degrees shows 3 more, so the hub number minus 90 is the overshoot
-    assert.deepEqual(shows(3), ['OLD', '93', '93', '93', 'NEW', '92', '92', '92']);
+    assert.deepEqual(shows(3), ['OLD', '93', '93', '93', 'NEW', '93', '93', '93']);
 });
 
 test('turn records: no turn in the team programs asks the wheels to roll forward or backward (code is not the creep)', async () => {
