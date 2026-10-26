@@ -36,7 +36,7 @@ Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
 |---|---|---|
 | `gyro-mission6-7-11_simpleturn.llsp3` | **Try this one first.** Every turn goes at one slow speed (12%), so the robot does not skid. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
 | `turn-test.llsp3` | A test, not a mission. Turns 90° six times and shows on the hub how far it really turned. | For testing |
-| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. | To start new missions |
+| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. Its turn spins at a slow 12%, like simpleturn. | To start new missions |
 
 Older programs and backups are in the **`archived-llsp3/`** folder. Their notes are in `docs/archive/`.
 
@@ -47,6 +47,7 @@ Older programs and backups are in the **`archived-llsp3/`** folder. Their notes 
 | `gyro-mission6-7-11_routefix_creep_push28.llsp3`, `..._routefix_push28.llsp3` | Versions with the push shortened to 28 cm |
 | `gyro-mission6-7-11_routefix_creep_push28_arm.llsp3` | The Mission 7 arm idea (not built yet) |
 | `gyro-mission6-7-11_routefix_creep.llsp3`, `gyro-mission6-7-11_routefix.llsp3` | Older route fixes (push 30 cm, no step notes) |
+| `Team Template_fast_turn.llsp3` | The old Team Template (fast turn that starts at up to 44%) |
 | `gyro-mission6-7-11.llsp3` | Our first gyro version with safety timers |
 | `Harrison_Lucas_Kai_leafcutter_uncover.llsp3` | Our very first mission program. Don't change it! |
 | `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | That first program with a better turn |
