@@ -169,6 +169,8 @@ For missing facts, use clearly labeled placeholders or ask a specific question.
 
 The following records were supplied by the user and are dated 2026-10-14 unless noted otherwise.
 
+**Layout update (2026-10-26, coach asked to clean up the notes):** `docs/` now holds only the current notes (`gyro-mission6-7-11_simpleturn.md`, `turn-test.md`, the Mission 7 arm guide and blueprint); `docs/reference/` the Prime Lessons guides (`.md` and `.pdf`); `docs/investigations/` `route-from-video.md/.png`, `mission6-7-11-routes.png`, `turn-creep-investigation.md`; `docs/archive/` every older program's notes and the old cheat sheet. Programs at the root: `gyro-mission6-7-11_simpleturn`, `turn-test`, `Team Template`; s36, slowturn and the arm file moved to `archived-llsp3/`. Paths written elsewhere in this file are from before the move; look in those subfolders. All moves with `git mv`, contents unchanged.
+
 **Layout (2026-10-24):** every note (`.md`) except this file and `README.md` (the kid-friendly front page GitHub shows, added 2026-10-24) lives in `docs/`; the `.llsp3` programs in use stay at the project root (since 2026-10-24 only the two push-28 route fixes, `turn-test` and `Team Template`); older programs and backups are in `archived-llsp3/` (both originals, turnfix, the gyro mission, gyro-mission6-7-11, routefix, routefix_creep; moved with `git mv`, contents unchanged; builders and tests read them from there), the simulator in `simulator/`, scripts in `tools/`. A `.md` named in this document without a folder means `docs/<name>` (for example `gyro-mission6-7-11.md` is `docs/gyro-mission6-7-11.md`). The root also has `index.html` and `.nojekyll` for GitHub Pages.
 
 | File | Purpose and protection |

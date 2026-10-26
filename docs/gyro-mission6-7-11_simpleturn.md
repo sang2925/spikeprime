@@ -9,7 +9,7 @@ A new file, slot **19**. Built from `gyro-mission6-7-11_routefix_push28` (in `ar
 | `turn` My Block speed | 8 + 0.4 times degrees left (starts at up to 42%) | **always 12%** | Fast starts made the grey back wheels skid |
 | Step 3 | 35 | **36** | Best number with slow turns in the simulator |
 
-The idea comes from the Prime Lessons gyro turn (`docs/SP3GyroTurning.pdf`, page 8): one slow speed, wait until the gyro reaches the number, stop. The PDF says: use low speeds to keep the turn accurate.
+The idea comes from the Prime Lessons gyro turn (`docs/reference/SP3GyroTurning.pdf`, page 8): one slow speed, wait until the gyro reaches the number, stop. The PDF says: use low speeds to keep the turn accurate.
 
 > Like a bike on gravel: pedal hard from a stop and the back wheel skids. Pedal gently and it grips.
 

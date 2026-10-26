@@ -34,21 +34,23 @@ Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
 
 | File | What it is | Use it? |
 |---|---|---|
-| `gyro-mission6-7-11_routefix_creep_push28.llsp3` | **Try this one first.** Our newest version. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
-| `gyro-mission6-7-11_routefix_push28.llsp3` | Same, for a robot that does **not** slide back when it starts a fast turn. | If the turn test says so |
+| `gyro-mission6-7-11_simpleturn.llsp3` | **Try this one first.** Every turn goes at one slow speed (12%), so the robot does not skid. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
 | `turn-test.llsp3` | A test, not a mission. Turns 90° six times and shows on the hub how far it really turned. | For testing |
 | `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. | To start new missions |
 
-Older programs and backups are in the **`archived-llsp3/`** folder:
+Older programs and backups are in the **`archived-llsp3/`** folder. Their notes are in `docs/archive/`.
 
 | File | What it is |
 |---|---|
-| `gyro-mission6-7-11_routefix_creep.llsp3` | Older version of our newest program (pushes 30 cm, no step notes) |
-| `gyro-mission6-7-11_routefix.llsp3` | Older version of the second one |
+| `gyro-mission6-7-11_routefix_creep_push28_back10_s36_slowturn.llsp3` | Faster turns that slow down at the end, step 3 36, back 10 |
+| `gyro-mission6-7-11_routefix_creep_push28_back10_s36.llsp3` and `..._back10.llsp3` | Earlier fixes for the slide in `turn 67` and the turn after the push |
+| `gyro-mission6-7-11_routefix_creep_push28.llsp3`, `..._routefix_push28.llsp3` | Versions with the push shortened to 28 cm |
+| `gyro-mission6-7-11_routefix_creep_push28_arm.llsp3` | The Mission 7 arm idea (not built yet) |
+| `gyro-mission6-7-11_routefix_creep.llsp3`, `gyro-mission6-7-11_routefix.llsp3` | Older route fixes (push 30 cm, no step notes) |
 | `gyro-mission6-7-11.llsp3` | Our first gyro version with safety timers |
 | `Harrison_Lucas_Kai_leafcutter_uncover.llsp3` | Our very first mission program. Don't change it! |
 | `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | That first program with a better turn |
-| `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | The program in our video |
+| `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | The program in our first video |
 
 None of the new programs has been tested on the real robot yet. Test them on the mat before a competition!
 
@@ -63,10 +65,12 @@ None of the new programs has been tested on the real robot yet. Test them on the
 | Folder | What's inside |
 |---|---|
 | `docs/` | Notes you can read. Start with these: |
-| | `gyro-mission6-7-11_routefix_creep_push28.md`: how to use our newest program |
-| | `gyro-mission6-7-11-cheat-sheet.md`: which number to change when something goes wrong |
+| | `gyro-mission6-7-11_simpleturn.md`: how to use our newest program |
 | | `turn-test.md`: how to run the turn test |
-| | `route-from-video.md` and `route-from-video.png`: where the robot really went in our video (for grown-ups, lots of detail) |
+| | `mission7-arm-build-guide.md`: the Mission 7 arm idea |
+| `docs/reference/` | Prime Lessons guides on turning, driving straight, variables and if-then blocks |
+| `docs/investigations/` | Where the robot really went in our videos and why it slid (for grown-ups, lots of detail) |
+| `docs/archive/` | Notes for the older programs |
 | `simulator/` | The simulator web page and its code |
 | `tools/` | Computer helpers (Python and JavaScript) that build and check our programs. Grown-ups only. |
 | `archived-llsp3/` | Old programs and backups (see above) |
