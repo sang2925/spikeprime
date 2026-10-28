@@ -36,7 +36,7 @@ Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
 |---|---|---|
 | `gyro-mission6-7-11_simpleturn.llsp3` | **Try this one first.** Every turn goes at one slow speed (12%), so the robot does not skid. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
 | `turn-test.llsp3` | A test, not a mission. Turns 90° six times and shows on the hub how far it really turned. | For testing |
-| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. Its turn spins at a slow 12%, like simpleturn. | To start new missions |
+| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. Its turn spins at a slow 12%, like simpleturn. It also has `Gyro Turn` (like our photo) and `Gyro Turn safe` (use this one: it can't miss the angle or get stuck). | To start new missions |
 
 Older programs and backups are in the **`archived-llsp3/`** folder. Their notes are in `docs/archive/`.
 
