@@ -15,6 +15,8 @@ Create actual files when asked. Do not give only a plan when the task is to buil
 
 Read this first in a new session. Details are in sections 4 and 14.
 
+**Newest (2026-11-03): competition programs.** `competition/` holds the programs the team runs at a tournament, one per hub slot: `R1 Mission 7.llsp3` (slot 1) and `R2 Mission 11.llsp3` (slot 2), split from the coach's working `110226-mission7-11.llsp3` (details in the first bullet below). Both use plain `move` blocks, the fixed `Gyro Turn` My Block and motor D for the arm. The coach reports the source program works; the assistant has not seen them run. Run sheet for the coach: `docs/competition.md` (start positions still to be filled in). `Team Template.llsp3` now has one `Gyro Turn` (the fixed one). The Missions 6-7-11 work below (`gyro-mission6-7-11_*`) is the older route and is not in the competition folder.
+
 **Newest (2026-10-25): coach's wheel photos and two runs of `gyro-mission6-7-11_routefix_creep_push28`.** Files: `videos/IMG_7453.MOV` (run 1), `videos/IMG_7454.MOV` (run 2), photos in `test-results/run-2026-10-25/` (all git-ignored). Read by eye from frames (handheld camera, no homography, so no measured poses).
 - **Underside photos (tape measure, about ±5 mm; coach marked the drive wheels as the BACK):** back of the robot to drive axle about **53 mm**, so body offset about 92 - 53 = **39 mm** (the 2026-10-23 video fit said 8 ± 6, which assumed the robot spins about its drive axle). Track width about 113 mm (sim 112 kept). No ball caster: a second axle of two grey tyre-less wheels about 82 mm ahead of the drive axle.
 - **Likely cause of the turn slide and run-to-run spread (inferred, not proven):** in an in-place turn the fixed grey wheels must scrape sideways, so the robot spins about a point between the two axles, not the drive-wheel middle, and where that point sits depends on grip and weight. **The coach keeps the robot as is (no caster swap).**
@@ -177,6 +179,8 @@ For missing facts, use clearly labeled placeholders or ask a specific question.
 
 The following records were supplied by the user and are dated 2026-10-14 unless noted otherwise.
 
+**Layout update (2026-11-03):** `competition/` (new) holds only the programs run at a tournament, named `R<run> <mission>` with the run number = hub slot. Drafts stay at the root or in `archived-llsp3/`.
+
 **Layout update (2026-10-26, coach asked to clean up the notes):** `docs/` now holds only the current notes (`gyro-mission6-7-11_simpleturn.md`, `turn-test.md`, the Mission 7 arm guide and blueprint); `docs/reference/` the Prime Lessons guides (`.md` and `.pdf`); `docs/investigations/` `route-from-video.md/.png`, `mission6-7-11-routes.png`, `turn-creep-investigation.md`; `docs/archive/` every older program's notes and the old cheat sheet. Programs at the root: `gyro-mission6-7-11_simpleturn`, `turn-test`, `Team Template`; s36, slowturn and the arm file moved to `archived-llsp3/`. Paths written elsewhere in this file are from before the move; look in those subfolders. All moves with `git mv`, contents unchanged.
 
 **Layout (2026-10-24):** every note (`.md`) except this file and `README.md` (the kid-friendly front page GitHub shows, added 2026-10-24) lives in `docs/`; the `.llsp3` programs in use stay at the project root (since 2026-10-24 only the two push-28 route fixes, `turn-test` and `Team Template`); older programs and backups are in `archived-llsp3/` (both originals, turnfix, the gyro mission, gyro-mission6-7-11, routefix, routefix_creep; moved with `git mv`, contents unchanged; builders and tests read them from there), the simulator in `simulator/`, scripts in `tools/`. A `.md` named in this document without a folder means `docs/<name>` (for example `gyro-mission6-7-11.md` is `docs/gyro-mission6-7-11.md`). The root also has `index.html` and `.nojekyll` for GitHub Pages.
@@ -187,7 +191,10 @@ The following records were supplied by the user and are dated 2026-10-14 unless 
 | `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | Turn-fix working copy. New `turn` My Block. Main program still uses `BA`. Do not change `BA`. |
 | `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.md` | Student explanation of the turn fix. Keep it matched to the actual working copy. |
 | `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | Gyro mission built from Team Template. See the conversion notes below. Designated slot 1. |
-| `Team Template.llsp3` | Starting point for every new mission. Includes `BA`, speed 50, the `turn` and `straight` My Blocks, and explanatory comments. Template slot is 19. Since 2026-10-26 its turn is a constant 12% (old one: `archived-llsp3/Team Template_fast_turn.llsp3`). |
+| `Team Template.llsp3` | Starting point for every new mission. Includes `BA`, speed 50, the `turn`, `straight` and `Gyro Turn` My Blocks, and explanatory comments. Template slot is 19. Since 2026-10-26 its turn is a constant 12% (old one: `archived-llsp3/Team Template_fast_turn.llsp3`). Since 2026-11-02 `Gyro Turn` is the fixed 15% gyro turn (old photo version removed; backup in `test-results/backups/`). |
+| `competition/R1 Mission 7.llsp3`, `competition/R2 Mission 11.llsp3` | Added 2026-11-03. The tournament programs, slots 1 and 2, split from `archived-llsp3/110226-mission7-11.llsp3` (the coach's working file, keep unchanged) by `tools/split_mission7_11.py`. Run sheet: `docs/competition.md`. |
+| `gyroturn-route.llsp3` | Added 2026-11-02. The coach's photo program (plain moves and Gyro Turn) with the fixed Gyro Turn; built by `tools/build_gyroturn_route.py`. Slot 19. |
+| `docs/competition.md` | Added 2026-11-03. One-page run sheet: run order, slots, start positions, attachment, competition-day checklist. |
 | `Straight Test.llsp3` | User moved it to Trash on 2026-10-14. Do not assume it is present. The tested helper remains in the template and gyro mission. |
 | `armflip.llsp3` | User removed it from the folder on 2026-10-14. Do not assume it is present. |
 | `docs/IfThenBlocks.md` | User-added Prime Lessons SPIKE 3 reference. |
@@ -301,7 +308,7 @@ Recorded on 2026-10-14:
 | A | Large motor | Drive wheel |
 | B | Large motor | Drive wheel |
 | C | Medium motor | Attachment used in this project |
-| D | Medium motor | Not used in this project |
+| D | Medium motor | Not used in this project (2026-11-03: the arm in the Mission 7 and Mission 11 competition programs) |
 
 ### Measured body size
 

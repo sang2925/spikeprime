@@ -28,6 +28,19 @@ Two buttons at the top make it easier:
 
 The simulator is a guess. It is like a weather forecast: useful, but the real robot on the real mat always has the final say.
 
+## Competition programs
+
+These are the programs we run at a tournament. They live in the **`competition/`** folder. The run number is the hub slot.
+
+| File | Mission | Hub slot |
+|---|---|---|
+| `R1 Mission 7.llsp3` | 07 Humongous Fungus | 1 |
+| `R2 Mission 11.llsp3` | 11 Window to the Past | 2 |
+
+The run sheet (where to start each run, what to check) is in `docs/competition.md`.
+
+Only put a program in `competition/` after it has worked on the mat several times in a row.
+
 ## Which program should I use?
 
 Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
@@ -35,9 +48,10 @@ Programs are the `.llsp3` files. Open them in the LEGO SPIKE app.
 | File | What it is | Use it? |
 |---|---|---|
 | `gyro-mission6-7-11_simpleturn.llsp3` | **Try this one first.** Every turn goes at one slow speed (12%), so the robot does not skid. Every step has a little note, like "STEP 7: PUSH LEVER (28)". | ⭐ Yes |
-| `gyro-mission6-7-11_gyroturnsafe.llsp3` | The same as simpleturn, but every turn uses **Gyro Turn safe** from the Team Template. To compare with simpleturn. | To compare |
-| `turn-test.llsp3` | A test, not a mission. Turns 90° six times and shows on the hub how far it really turned. | For testing |
-| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. Its turn spins at a slow 12%, like simpleturn. It also has `Gyro Turn` (like our photo) and `Gyro Turn safe` (use this one: it can't miss the angle or get stuck). | To start new missions |
+| `gyro-mission6-7-11_gyroturnsafe.llsp3` | The same as simpleturn, but every turn uses **Gyro Turn safe** (now called `Gyro Turn` in the Team Template). To compare with simpleturn. | To compare |
+| `gyroturn-route.llsp3` | The program from our photo (plain `move` blocks), with the fixed `Gyro Turn`. | Example |
+| `turn-test.llsp3` | A test, not a mission. Turns 90° four times (a full circle) and shows on the hub how far it really turned. | For testing |
+| `Team Template.llsp3` | The starting point for every **new** mission. Copy it, don't change it. It has `turn` (slow 12%), `straight`, and **`Gyro Turn`** (15%, the one our competition programs use: it can't miss the angle or get stuck). | To start new missions |
 
 Older programs and backups are in the **`archived-llsp3/`** folder. Their notes are in `docs/archive/`.
 
@@ -54,7 +68,7 @@ Older programs and backups are in the **`archived-llsp3/`** folder. Their notes 
 | `Harrison_Lucas_Kai_leafcutter_uncover_turnfix.llsp3` | That first program with a better turn |
 | `Harrison_Lucas_Kai_leafcutter_gyro.llsp3` | The program in our first video |
 
-None of the new programs has been tested on the real robot yet. Test them on the mat before a competition!
+Only the competition programs have worked on the real robot so far. Test anything else on the mat before a competition!
 
 ### The golden rules
 
@@ -66,7 +80,9 @@ None of the new programs has been tested on the real robot yet. Test them on the
 
 | Folder | What's inside |
 |---|---|
+| `competition/` | The programs we run at a tournament, one per hub slot |
 | `docs/` | Notes you can read. Start with these: |
+| | `competition.md`: the run sheet for tournament day |
 | | `gyro-mission6-7-11_simpleturn.md`: how to use our newest program |
 | | `turn-test.md`: how to run the turn test |
 | | `mission7-arm-build-guide.md`: the Mission 7 arm idea |
@@ -85,7 +101,7 @@ None of the new programs has been tested on the real robot yet. Test them on the
 |---|---|
 | **Gyro** | A sensor in the hub that knows which way the robot is pointing, like a compass. |
 | **Yaw** | How far the robot has turned left or right. |
-| **My Block** | A block we made ourselves, like `straight` and `turn`. |
+| **My Block** | A block we made ourselves, like `straight`, `turn` and `Gyro Turn`. |
 | **Slot** | One of the hub's 20 places to save a program (0 to 19). |
 | **Simulator** | A computer copy of the robot and mat, to try ideas without the real robot. |
 
